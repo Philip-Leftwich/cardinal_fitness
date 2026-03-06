@@ -54,12 +54,70 @@ data_wide <- data %>%
   mutate(genotype = fct_relevel(genotype, "WT"))
 
 data_wide <- data_wide %>% 
-  filter(delivery !="XA")
+  filter(delivery %in% "SUCROSE")
 
 # Model=====
 
-model <- glm(cbind(positive, negative) ~ genotype * delivery, data = data_wide, family = binomial(link = "logit"))
+smurf_model <- glm(cbind(positive, negative) ~ genotype, data = data_wide, family = binomial(link = "logit"))
 
-drop1(model, test = "Chisq")
+drop1(smurf_model, test = "Chisq")
 
-summary(model)
+summary(smurf_model)
+
+# Plot smurf predictions ====
+
+# Get emmeans predictions on response scale
+smurf_emm <- emmeans::emmeans(smurf_model, ~ genotype, type = "response") |>
+  as.data.frame()
+
+# Factor levels
+
+genotype_order <- c("WT", "KI", "KO")
+
+smurf_emm <- smurf_emm |>
+  mutate(
+    genotype = factor(genotype, levels = genotype_order)
+  )
+
+# Raw proportions
+raw_smurf <- data_wide |>
+  mutate(
+    prop = positive / (positive + negative),
+    genotype = factor(genotype, levels = genotype_order)
+  )
+
+# Plot
+p_smurf <- ggplot(smurf_emm, aes(x = genotype, y = prob, colour = genotype, group = genotype)) +
+
+   # 95% CI
+  geom_errorbar(
+    aes(ymin = asymp.LCL, ymax = asymp.UCL),
+    position = position_nudge(x = .1),
+    width = 0.15, linewidth = 0.8
+  ) +
+   # Model predictions
+  geom_point(
+    position = position_nudge(x = .1),
+    size = 3
+  ) +
+  # Raw data
+   geom_point(
+    data = raw_smurf,
+    aes(x = genotype, y = prop, colour = genotype),
+    position = position_jitter(width = .15),
+    alpha = 0.3, size = 1.5, shape = 16
+  ) +
+   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  scale_colour_brewer(palette = "Dark2", name = "Genotype") +
+  labs(
+    x = "Delivery",
+    y = "Smurf rate",
+    title = "Smurf assay: proportion of smurf-positive flies"
+  ) +
+  theme_bw(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    panel.grid.minor = element_blank()
+  )
+
+p_smurf

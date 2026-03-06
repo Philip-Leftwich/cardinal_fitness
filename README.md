@@ -1,3 +1,15 @@
+## Fertility
+
+A lot of work - think it is now fixed!!!!
+
+1759 = cdg384
+2360B5 = cdg225
+2072 = cdg384_del
+2301 = cdg338-384
+D251 = cd225R
+QA383P = cd384R
+
+
 # Fig 2. Done! 
 ### This is weird and confusing!!! Not sure what to make of it? 
 
@@ -8,6 +20,18 @@
 # Fig 1 and 3 are done?
 
 # Fig 4 supplementation done
+
+## 
+I will resend the updated summary of what we agreed for each figure just to check we are all on the same page.
+
+Figure 1 (FertilityData.xlsx): fecundity and fertility data of 1759, QA383P and 2360B5. We normally present the engorgement rate/hatching rate as a table, but if you have a different way of presenting it feel free to add it in the figure.
+Figure 2 (SurvivalAfterBFData.xlsx): survival after blood-feeding of 1759, 2360B5, 2072, 2301, d251.
+Figure 3 (SmurfAssayData.xlsx): There is an example of the figure in the draft. Unlike what we discussed, I would not include XA supplementation because in this experiment is where I saw rescue with NaOH and I don’t think the pH is good enough to argue it…
+Figure 4 (XASupplementationData.xlsx): The 26mM was a typo in the headers, I have fixed it in the new document. For reference, the mM C- is the NaOH control in this dataset.
+Figure 5 (TransHetSurvivalData.xlsx and qPCR.xlsx): There is an example of the figure in the draft. I was planning to add only one of the reference genes in the main manuscript, but I have added all the data.
+Supplementary data
+
+Hom survival (SurvivalData.xlsx): hom survival of 1759, cd KO or QA383P and 2072 (done and added to the file).
 
 
 I will resend the updated summary of what we agreed for each figure just to check we are all on the same page.

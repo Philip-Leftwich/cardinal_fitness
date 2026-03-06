@@ -134,6 +134,8 @@ model_summary <- tidy(model4, conf.int = TRUE, exponentiate = TRUE) %>%
 # Hazard ratios (exponentiated coefficients)
 model_summary
 
+model4
+
 # Generate predicted survival curves
 pred_data <- expand_grid(
   experiment = unique(data_long2$experiment),
@@ -152,20 +154,24 @@ surv_pred <- summary(model4, newdata = pred_data,
 surv_df <- as_tibble(surv_pred)
 
 # Visualisation
-ggplot(surv_df, aes(x = time, y = est, 
+XA_suppl <- ggplot(surv_df, aes(x = time, y = est, 
                     fill = factor(dosage_mM),
                     linetype = genotype)) +
   geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2)+
   geom_line(aes(colour = factor(dosage_mM))) +
-  facet_wrap(c_minus~genotype~experiment) +
-  scale_y_continuous(limits = c(0, 1)) +
+  facet_wrap(c_minus~experiment) +
+ scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Time (Hours)", 
        y = "Survival Probability",
-       colour = "Dosage (mM)",
-       fill = "Dosage (mM)",
-       linetype = "Genotype") +
-  theme_minimal()
-
+       colour = "Treatment",
+       fill = "Treatment") +
+  scale_colour_manual(values = c("#FBEAFF", "#B39CD0", "#845EC2"), name = "Dosage")+
+  scale_fill_manual(values = c("#FBEAFF", "#B39CD0", "#845EC2"), name = "Dosage")+
+   theme_bw(base_size = 12) +
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    panel.grid.minor = element_blank()
+  )
 # Model fit statistics
 glance(model4)
 
