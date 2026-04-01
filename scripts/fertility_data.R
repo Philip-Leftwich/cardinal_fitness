@@ -1,4 +1,5 @@
 source(here::here("scripts", "packages.R"))
+source(here::here("scripts", "fertility_data_functions.R"))
 
 # Read survival data ====
 
@@ -47,112 +48,6 @@ fertility_data <- rbind(data_list[[1]], data_list[[2]], data_list[[3]])
 cross_order <- c("WT", "HETxSDA", "SDAxHET", "HOMxSDA", "SDAxHOM")
 
 line_order <- c("QA383P", "2360B5", "1759")
-
-fertility_data <- fertility_data |>
-  mutate(
-    cross = case_when(
-      cross == "CdKO(het)xSDA" ~ "HETxSDA",
-      cross == "SDAxCdKO(het)" ~ "SDAxHET",
-      cross == "CdKO(hom)xSDA" ~ "HOMxSDA",
-      cross == "SDAxCdKO(hom)" ~ "SDAxHOM",
-      cross %in% c("WTxSDA", "SDAxWT", "SDAxSDA") ~ "WT",
-      .default = as.character(cross)
-    )
-  ) |>
-  drop_na(cross) |>
-  mutate(cross = factor(cross, levels = cross_order)) |>
-  mutate(line = factor(line, levels = line_order)) |>
-  unite("line_cross", line, cross, remove = FALSE)
-# remove wildtype crosses
-#fertility_data <- fertility_data |>
-#  filter(!cross %in% c("WTxSDA", "SDAxWT", "SDAxSDA"))
-
-# Line label lookup with superscripts (plotmath notation for plots)
-line_labels <- c(
-  "1759" = expression(italic(cd)^g384),
-  "2360B5" = expression(italic(cd)^g225),
-  "QA383P" = expression(
-    italic(cd)^{
-      "384R"
-    }
-  )
-)
-
-line_colours <- c(
-  "2360B5" = "#8BABD3",
-  "1759" = "#BB8BD3",
-  "D251" = "#FFA040",
-  "QA383P" = "#FFE699",
-  "SDA-500" = "lightgray"
-)
-
-
-line_shape <- c("1759" = 16, "2360B5" = 17, "QA383P" = 15)
-
-# Shared plot theme ====
-fertility_theme <- list(
-  scale_colour_manual(
-    values = line_colours,
-    name = "Line",
-    labels = line_labels
-  ),
-  scale_shape_manual(values = line_shape, name = "Line", labels = line_labels),
-  labs(x = "Cross"),
-  theme_bw(base_size = 12),
-  theme(
-    axis.text.x = element_text(angle = 35, hjust = 1),
-    legend.text = element_text(size = 14),
-    panel.grid.minor = element_blank()
-  )
-)
-
-# Helper: get emmeans predictions on response scale, refactored cross levels
-get_emm <- function(model, cross_levels) {
-  emmeans::emmeans(model, ~ line + cross, type = "response") |>
-    as_tibble() |>
-    mutate(cross = factor(cross, levels = cross_levels)) |>
-    drop_na()
-}
-
-# Helper: base plot layer — model predictions + CI + raw jittered points
-plot_fertility <- function(
-  emm_data,
-  raw_data,
-  raw_y,
-  y_label,
-  plot_title,
-  y_scale = NULL
-) {
-  p <- ggplot(
-    emm_data,
-    aes(x = cross, y = response, colour = line, group = line, shape = line)
-  ) +
-    geom_point(
-      data = raw_data,
-      aes(y = {{ raw_y }}, colour = line),
-      position = position_jitterdodge(jitter.width = 0.15, dodge.width = 0.6),
-      alpha = 0.3,
-      size = 1.5,
-      shape = 16
-    ) +
-    geom_point(position = position_dodge(width = 0.6), size = 3) +
-    geom_errorbar(
-      aes(ymin = asymp.LCL, ymax = asymp.UCL),
-      position = position_dodge(width = 0.6),
-      width = 0.25,
-      linewidth = 0.8
-    ) +
-    labs(y = y_label, title = plot_title) +
-    fertility_theme
-
-  if (!is.null(y_scale)) {
-    p <- p + y_scale
-  }
-  p
-}
-
-
-# Fecundity ====
 
 egg_model <- glmmTMB(
   eggs ~ line * cross + (1 | rep / plate_well),

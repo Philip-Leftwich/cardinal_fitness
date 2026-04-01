@@ -1,4 +1,5 @@
 source(here::here("scripts", "packages.R"))
+source(here::here("scripts", "smurf_functions.R"))
 
 # Load data ====
 
@@ -12,7 +13,24 @@ line_labels <- c(
 
 # ── Shared helper functions ────────────────────────────────────────────────────
 
-# Fit Weibull model and return tidy predicted survival curve data frame
+#' Fit a Weibull survival model and return predicted survival curves
+#'
+#' Fits a parametric Weibull model via [flexsurv::flexsurvreg()] and generates
+#' a tidy tibble of predicted survival probabilities over a time grid,
+#' automatically building the prediction grid from unique covariate values.
+#'
+#' @param data A data frame containing the survival data.
+#' @param formula A formula passed to [flexsurv::flexsurvreg()], typically
+#'   `Surv(time, event) ~ covariates`.
+#' @param t_max Numeric. Upper bound of the prediction time sequence.
+#' @param n_t Integer. Number of evenly-spaced time points to predict at.
+#'   Default `108`.
+#' @return A named list with two elements:
+#'   \describe{
+#'     \item{model}{The fitted `flexsurvreg` object.}
+#'     \item{surv_df}{A tibble of predicted survival probabilities with columns
+#'       `time`, `est`, `lcl`, `ucl`, and one column per covariate.}
+#'   }
 fit_weibull_surv <- function(data, formula, t_max, n_t = 108) {
   model <- flexsurvreg(formula, data = data, dist = "weibull")
   pred_vars <- all.vars(formula)[-c(1, 2)] # predictor names from formula
@@ -29,7 +47,17 @@ fit_weibull_surv <- function(data, formula, t_max, n_t = 108) {
   list(model = model, surv_df = as_tibble(surv_pred))
 }
 
-# Tidy Kaplan-Meier fit, stripping strata prefix, with time-zero row added
+#' Fit and tidy a Kaplan-Meier survival curve
+#'
+#' Fits a Kaplan-Meier estimator, strips the variable-name prefix from strata
+#' labels (e.g. `"group=A"` → `"A"`), and prepends a time-zero row
+#' (estimate = 1) for each stratum so step lines start at 1.
+#'
+#' @param data A data frame containing the survival data.
+#' @param formula A formula passed to [survival::survfit()], typically
+#'   `Surv(time, event) ~ strata_var`.
+#' @return A tibble from [broom::tidy.survfit()] with cleaned `strata` labels
+#'   and an added time-zero row per stratum.
 tidy_km <- function(data, formula) {
   km_fit <- survfit(formula, data = data)
   strata_prefix <- paste0(all.vars(formula[[3]]), "=")
@@ -46,7 +74,24 @@ tidy_km <- function(data, formula) {
     arrange(strata, time)
 }
 
-# Build Weibull + KM survival plot
+#' Build a Weibull + Kaplan-Meier survival plot
+#'
+#' Combines a shaded ribbon CI and model line from Weibull predictions with a
+#' dashed KM step overlay.
+#'
+#' @param surv_df A tibble of Weibull predicted survival from
+#'   [fit_weibull_surv()] with columns `time`, `est`, `lcl`, `ucl`, and a
+#'   grouping column named by `colour_var`.
+#' @param km_df A tibble of tidy KM estimates from [tidy_km()] with columns
+#'   `time`, `estimate`, and a strata column named by `colour_var`.
+#' @param colour_var Character. Name of the column used for colour/fill
+#'   grouping in both `surv_df` and `km_df`.
+#' @param colour_scale A ggplot2 colour scale (e.g.
+#'   `scale_colour_brewer(...)`).
+#' @param fill_scale A ggplot2 fill scale (e.g. `scale_fill_brewer(...)`).
+#' @param extra_layers A ggplot2 layer or list of layers to append (e.g.
+#'   `facet_wrap(...)`), or `NULL`. Default `NULL`.
+#' @return A `ggplot` object.
 plot_surv <- function(
   surv_df,
   km_df,

@@ -25,23 +25,22 @@ The cdg384 line had the inverse of this response, with the SDA x HET (0.63, [0.4
 ```{r}
 
 line_labels_html <- c(
-  "(Intercept)"                = "Intercept",
-  "line2360B5"                 = "<em>cd</em><sup>g225</sup>",
-  "line1759"                   = "<em>cd</em><sup>g384</sup>",
-  "crossHETxSDA"               = "HET&times;SDA",
-  "crossSDAxHET"               = "SDA&times;HET",
-  "crossHOMxSDA"               = "HOM&times;SDA",
-  "crossSDAxHOM"               = "SDA&times;HOM",
-  "line1759:crossHETxSDA"      = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
-  "line1759:crossSDAxHET"      = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
-  "line1759:crossHOMxSDA"      = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
-  "line1759:crossSDAxHOM"      = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
-  "line2360B5:crossHETxSDA"    = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
-  "line2360B5:crossSDAxHET"    = "<em>cd</em><sup>g225</sup> × SDA&times;HET"
+  "(Intercept)" = "Intercept",
+  "line2360B5" = "<em>cd</em><sup>g225</sup>",
+  "line1759" = "<em>cd</em><sup>g384</sup>",
+  "crossHETxSDA" = "HET&times;SDA",
+  "crossSDAxHET" = "SDA&times;HET",
+  "crossHOMxSDA" = "HOM&times;SDA",
+  "crossSDAxHOM" = "SDA&times;HOM",
+  "line1759:crossHETxSDA" = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
+  "line1759:crossSDAxHET" = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
+  "line1759:crossHOMxSDA" = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
+  "line1759:crossSDAxHOM" = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
+  "line2360B5:crossHETxSDA" = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
+  "line2360B5:crossSDAxHET" = "<em>cd</em><sup>g225</sup> × SDA&times;HET"
 )
 
-tab_model(egg_model,
-          pred.labels = line_labels_html)
+tab_model(egg_model, pred.labels = line_labels_html)
 ```
 
 
@@ -60,25 +59,24 @@ The single included cdg225 cross (SDA×HET) did  differ significantly from the W
 
 ```{r}
 line_labels_html <- c(
-  "(Intercept)"                = "Intercept",
-  "line2360B5"                 = "<em>cd</em><sup>g225</sup>",
-  "line1759"                   = "<em>cd</em><sup>g384</sup>",
-  "crossHETxSDA"               = "HET&times;SDA",
-  "crossSDAxHET"               = "SDA&times;HET",
-  "crossHOMxSDA"               = "HOM&times;SDA",
-  "crossSDAxHOM"               = "SDA&times;HOM",
-  "line1759:crossHETxSDA"      = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
-  "line1759:crossSDAxHET"      = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
-  "line1759:crossHOMxSDA"      = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
-  "line1759:crossSDAxHOM"      = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
-  "line2360B5:crossHETxSDA"    = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
-  "line2360B5:crossSDAxHET"    = "<em>cd</em><sup>g225</sup> × SDA&times;HET",
-  "line2360B5:crossHOMxSDA"    = "<em>cd</em><sup>g225</sup> × HOM&times;SDA",
-  "line2360B5:crossSDAxHOM"    = "<em>cd</em><sup>g225</sup> × SDA&times;HOM"
+  "(Intercept)" = "Intercept",
+  "line2360B5" = "<em>cd</em><sup>g225</sup>",
+  "line1759" = "<em>cd</em><sup>g384</sup>",
+  "crossHETxSDA" = "HET&times;SDA",
+  "crossSDAxHET" = "SDA&times;HET",
+  "crossHOMxSDA" = "HOM&times;SDA",
+  "crossSDAxHOM" = "SDA&times;HOM",
+  "line1759:crossHETxSDA" = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
+  "line1759:crossSDAxHET" = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
+  "line1759:crossHOMxSDA" = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
+  "line1759:crossSDAxHOM" = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
+  "line2360B5:crossHETxSDA" = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
+  "line2360B5:crossSDAxHET" = "<em>cd</em><sup>g225</sup> × SDA&times;HET",
+  "line2360B5:crossHOMxSDA" = "<em>cd</em><sup>g225</sup> × HOM&times;SDA",
+  "line2360B5:crossSDAxHOM" = "<em>cd</em><sup>g225</sup> × SDA&times;HOM"
 )
 
-tab_model(larvae_model2,
-          pred.labels = line_labels_html)
+tab_model(larvae_model2, pred.labels = line_labels_html)
 ```
 
 ```{r}
@@ -98,22 +96,24 @@ All KI heterozygote lines showed substantially reduced survival relative to cd^2
 
 ```{r}
 blood_feeding_labels_html <- c(
-  "(Intercept)"                  = "Intercept (<em>cd</em><sup>225R</sup> Hom)",
-  "line_treatment1759_Het"       = "<em>cd</em><sup>g384</sup> Het",
-  "line_treatment1759_Hom"       = "<em>cd</em><sup>g384</sup> Hom",
-  "line_treatment1759_WT"        = "<em>cd</em><sup>g384</sup> WT",
-  "line_treatment2072_Het"       = "<em>cd</em><sup>g384del</sup> Het",
-  "line_treatment2072_WT"        = "<em>cd</em><sup>g384del</sup> WT",
-  "line_treatment2301_Het"       = "<em>cd</em><sup>g338-384</sup> Het",
-  "line_treatment2301_WT"        = "<em>cd</em><sup>g338-384</sup> WT",
-  "line_treatment2360B5_Het"     = "<em>cd</em><sup>g225</sup> Het",
-  "line_treatment2360B5_WT"      = "<em>cd</em><sup>g225</sup> WT",
-  "line_treatmentD251_WT"        = "<em>cd</em><sup>225R</sup> WT"
+  "(Intercept)" = "Intercept (<em>cd</em><sup>225R</sup> Hom)",
+  "line_treatment1759_Het" = "<em>cd</em><sup>g384</sup> Het",
+  "line_treatment1759_Hom" = "<em>cd</em><sup>g384</sup> Hom",
+  "line_treatment1759_WT" = "<em>cd</em><sup>g384</sup> WT",
+  "line_treatment2072_Het" = "<em>cd</em><sup>g384del</sup> Het",
+  "line_treatment2072_WT" = "<em>cd</em><sup>g384del</sup> WT",
+  "line_treatment2301_Het" = "<em>cd</em><sup>g338-384</sup> Het",
+  "line_treatment2301_WT" = "<em>cd</em><sup>g338-384</sup> WT",
+  "line_treatment2360B5_Het" = "<em>cd</em><sup>g225</sup> Het",
+  "line_treatment2360B5_WT" = "<em>cd</em><sup>g225</sup> WT",
+  "line_treatmentD251_WT" = "<em>cd</em><sup>225R</sup> WT"
 )
 
-tab_model(weibull_bf$model,
-          pred.labels = blood_feeding_labels_html,
-          show.re.var = FALSE)
+tab_model(
+  weibull_bf$model,
+  pred.labels = blood_feeding_labels_html,
+  show.re.var = FALSE
+)
 ```
 
 ```{r}
@@ -128,16 +128,18 @@ D251 Het mosquitoes did not differ significantly from 2360B5 Het (estimate = 0.9
 
 ```{r}
 transhet_labels_html <- c(
-  "(Intercept)"              = "Intercept",
-  "line_treatmentD251:2360Het"   = "Trans-het",
-  "line_treatmentD251:2360WT"   = "Het<sup>KO</sup>",
-  "line_treatment2360WT"  = "WT",
-  "line_treatment2360Het"    = "Het"
+  "(Intercept)" = "Intercept",
+  "line_treatmentD251:2360Het" = "Trans-het",
+  "line_treatmentD251:2360WT" = "Het<sup>KO</sup>",
+  "line_treatment2360WT" = "WT",
+  "line_treatment2360Het" = "Het"
 )
 
-tab_model(weibull_th$model,
-          pred.labels = transhet_labels_html,
-          show.re.var = FALSE)
+tab_model(
+  weibull_th$model,
+  pred.labels = transhet_labels_html,
+  show.re.var = FALSE
+)
 ```
 
 ```{r}
@@ -155,9 +157,11 @@ Midgut integrity was assessed using the smurf assay. The proportion of smurf-pos
 KI mosquitoes on sucrose had a dramatically elevated smurf rate compared to WT controls (OR = 65.61, 95% CI: 25.70–205.20, p < 0.001), confirming that the cardinal KI allele causes significant gut barrier disruption after blood feeding. The KO genotype on sucrose showed a smurf rate consistent with zero events (estimate approaching 0, p = 0.996), reflecting complete separation and no observed smurf-positive cases. NaOH delivery did not significantly alter smurf rate in either WT (OR = 0.62, p = 0.487) or KI mosquitoes relative to their respective sucrose groups (KI × NaOH interaction: OR = 0.55, p = 0.431). TRP-related terms showed extreme estimates driven by complete separation, preventing reliable interpretation. Taken together, the data indicate that the KI phenotype includes midgut barrier disruption, and that pH adjustment via NaOH does not significantly rescue this defect.
 
 ```{r}
-tab_model(smurf_model,
-       #   string.pred = line_labels_html,
-          show.re.var = FALSE)
+tab_model(
+  smurf_model,
+  #   string.pred = line_labels_html,
+  show.re.var = FALSE
+)
 ```
 
 ```{r}
@@ -183,9 +187,11 @@ The effect of xanthurenic acid (XA) supplementation on post-blood-feeding surviv
 Sugar supplementation was associated with substantially longer survival than blood supplementation (estimate = 1.96, 95% CI: 1.39–2.78, p < 0.001). WT mosquitoes survived considerably longer than Het mosquitoes across conditions (estimate = 4.69, 95% CI: 2.69–8.19, p < 0.001). A dose of 6 mM XA significantly extended survival relative to the 0 mM condition (estimate = 1.34, 95% CI: 1.03–1.76, p = 0.031), while 24 mM XA did not differ significantly from 0 mM (estimate = 0.90, p = 0.409). The presence of XA (c+ condition) was associated with longer survival overall compared to NaOH control (estimate = 1.59, 95% CI: 1.13–2.21, p = 0.007). The interaction between sugar supplementation and XA presence showed a trend toward a reduced benefit of XA in the sugar route (estimate = 0.69, 95% CI: 0.46–1.02, p = 0.064), though this did not reach statistical significance. These results indicate that 6 mM XA supplementation via the blood route partially rescues the post-blood-feeding survival defect in KI heterozygotes.
 
 ```{r}
-tab_model(model_4,
-      #    string.pred = line_labels_html,
-          show.re.var = FALSE)
+tab_model(
+  model_4,
+  #    string.pred = line_labels_html,
+  show.re.var = FALSE
+)
 ```
 
 ```{r}
@@ -205,22 +211,21 @@ Homozygous 1759 females showed near-complete failure to eclose (Genotype HOM: OR
 
 ```{r}
 hom_survival_labels_html <- c(
-  "(Intercept)"                  = "Intercept (<em>cd</em><sup>384R</sup> HET female)",
-  "line1759"                     = "<em>cd</em><sup>g384</sup>",
-  "GenotypeHOM"                  = "HOM",
-  "GenotypeWT"                   = "WT",
-  "Sexmale"                      = "Male",
-  "line1759:GenotypeHOM"         = "<em>cd</em><sup>g384</sup> &times; HOM",
-  "line1759:GenotypeWT"          = "<em>cd</em><sup>g384</sup> &times; WT",
-  "line1759:Sexmale"             = "<em>cd</em><sup>g384</sup> &times; Male",
-  "GenotypeHOM:Sexmale"          = "HOM &times; Male",
-  "GenotypeWT:Sexmale"           = "WT &times; Male",
+  "(Intercept)" = "Intercept (<em>cd</em><sup>384R</sup> HET female)",
+  "line1759" = "<em>cd</em><sup>g384</sup>",
+  "GenotypeHOM" = "HOM",
+  "GenotypeWT" = "WT",
+  "Sexmale" = "Male",
+  "line1759:GenotypeHOM" = "<em>cd</em><sup>g384</sup> &times; HOM",
+  "line1759:GenotypeWT" = "<em>cd</em><sup>g384</sup> &times; WT",
+  "line1759:Sexmale" = "<em>cd</em><sup>g384</sup> &times; Male",
+  "GenotypeHOM:Sexmale" = "HOM &times; Male",
+  "GenotypeWT:Sexmale" = "WT &times; Male",
   "line1759:GenotypeHOM:Sexmale" = "<em>cd</em><sup>g384</sup> &times; HOM &times; Male",
-  "line1759:GenotypeWT:Sexmale"  = "<em>cd</em><sup>g384</sup> &times; WT &times; Male"
+  "line1759:GenotypeWT:Sexmale" = "<em>cd</em><sup>g384</sup> &times; WT &times; Male"
 )
 
-tab_model(model,
-          pred.labels = hom_survival_labels_html)
+tab_model(model, pred.labels = hom_survival_labels_html)
 ```
 
 

@@ -1,4 +1,5 @@
 source(here::here("scripts", "packages.R"))
+source(here::here("scripts", "supplementation_data_functions.R"))
 
 # Load data ====
 
@@ -37,34 +38,6 @@ data_long2 <- data_long |>
   ) |>
   rename("dosage_mM" = dosage)
 
-
-# ── Shared helper functions ────────────────────────────────────────────────────
-
-# Fit a single flexsurv model safely, returning NULL on failure
-fit_flexsurv <- function(formula, data, dist) {
-  tryCatch(
-    flexsurvreg(formula, data = data, dist = dist),
-    error = function(e) NULL
-  )
-}
-
-# Tidy model summary: exponentiated coefficients rounded to 3dp
-tidy_model <- function(model) {
-  tidy(model, conf.int = TRUE, exponentiate = TRUE) |>
-    mutate(across(where(is.numeric), ~ round(.x, 3)))
-}
-
-# Generate tidy predicted survival curve tibble from a flexsurvreg model
-pred_surv <- function(model, newdata, t_max, n_t = 108) {
-  summary(
-    model,
-    newdata = newdata,
-    type = "survival",
-    t = seq(0, t_max, length.out = n_t),
-    tidy = TRUE
-  ) |>
-    as_tibble()
-}
 
 # ── Distribution comparison ────────────────────────────────────────────────────
 
