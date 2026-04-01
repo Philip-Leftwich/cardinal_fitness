@@ -1,0 +1,245 @@
+---
+title: "cardinal fitness — results summaries"
+format:
+  html:
+    embed-resources: true
+---
+
+```{r, include = FALSE}
+source("scripts/fertility_data.R")
+```
+
+## Fecundity
+
+Fecundity (egg count per well) was modelled using a zero-inflated negative binomial mixed model with cross direction and genetic line as fixed effects, and replicate and plate well as nested random effects (n = 341 observations across 340 wells, 10 replicates).
+
+In the count component, both cd384R and cdg225 did not produce significantly different numbers of eggs (IRR = 1.09, 95%CI: 0.85-1.41, p = 0.49). For both lines where applicable the direction of cross was more important with the SDA x HET (1.31, [1.03-1.67], p = 0.029) and SDA x HOM (1.43, [1.09-1.88], p = 0.009) producing slightly more eggs than the inverse crosses. 
+
+The cdg384 line had the inverse of this response, with the SDA x HET (0.63, [0.47-1.86], p = 0.004) and the SDA x HOM (0.41, [0.28-0.59, p <0.001]) producing fewer eggs than the reciprocal crosses.
+
+> Note can make pairwise comparisons across all lines 
+
+
+
+
+```{r}
+
+line_labels_html <- c(
+  "(Intercept)"                = "Intercept",
+  "line2360B5"                 = "<em>cd</em><sup>g225</sup>",
+  "line1759"                   = "<em>cd</em><sup>g384</sup>",
+  "crossHETxSDA"               = "HET&times;SDA",
+  "crossSDAxHET"               = "SDA&times;HET",
+  "crossHOMxSDA"               = "HOM&times;SDA",
+  "crossSDAxHOM"               = "SDA&times;HOM",
+  "line1759:crossHETxSDA"      = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
+  "line1759:crossSDAxHET"      = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
+  "line1759:crossHOMxSDA"      = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
+  "line1759:crossSDAxHOM"      = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
+  "line2360B5:crossHETxSDA"    = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
+  "line2360B5:crossSDAxHET"    = "<em>cd</em><sup>g225</sup> × SDA&times;HET"
+)
+
+tab_model(egg_model,
+          pred.labels = line_labels_html)
+```
+
+
+
+```{r}
+p_fecundity
+```
+
+## Fertility
+
+Hatching rate (larvae per egg) was modelled using a binomial GLMM with a combined line × cross factor as the fixed effect, and nested random effects of plate well within replicate within line-cross group.
+
+All comparisons are relative to WT. Most cross types within the cdg384 line did not differ significantly in hatching rate. A striking exception was the cdg384 SDA×HOM cross, which showed near-zero hatching relative to the reference (OR = 0.00, 95% CI: 0 - 0.01, p < 0.001), indicating that 1759 homozygous males are essentially sterile. 
+
+The single included cdg225 cross (SDA×HET) did  differ significantly from the WT (OR = 0.15, p <0.001). In contrast, all tested cd384R crosses showed equal or higher hatching rates than the WT reference.
+
+```{r}
+line_labels_html <- c(
+  "(Intercept)"                = "Intercept",
+  "line2360B5"                 = "<em>cd</em><sup>g225</sup>",
+  "line1759"                   = "<em>cd</em><sup>g384</sup>",
+  "crossHETxSDA"               = "HET&times;SDA",
+  "crossSDAxHET"               = "SDA&times;HET",
+  "crossHOMxSDA"               = "HOM&times;SDA",
+  "crossSDAxHOM"               = "SDA&times;HOM",
+  "line1759:crossHETxSDA"      = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
+  "line1759:crossSDAxHET"      = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
+  "line1759:crossHOMxSDA"      = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
+  "line1759:crossSDAxHOM"      = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
+  "line2360B5:crossHETxSDA"    = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
+  "line2360B5:crossSDAxHET"    = "<em>cd</em><sup>g225</sup> × SDA&times;HET",
+  "line2360B5:crossHOMxSDA"    = "<em>cd</em><sup>g225</sup> × HOM&times;SDA",
+  "line2360B5:crossSDAxHOM"    = "<em>cd</em><sup>g225</sup> × SDA&times;HOM"
+)
+
+tab_model(larvae_model2,
+          pred.labels = line_labels_html)
+```
+
+```{r}
+p_fertility
+```
+
+
+## Survival after Blood Feeding
+
+```{r, include = FALSE}
+source("scripts/blood_feeding.R")
+```
+
+Post-blood-feeding survival was modelled using a Weibull parametric survival model with a single combined line × genotype factor (n = 384). Model estimates are scale factors relative to the reference group (cd^225R^ Hom); values below 1 indicate shorter survival relative to this reference.
+
+All KI heterozygote lines showed substantially reduced survival relative to cd^225R^ Hom. The cd^g338-384^ Het and cd^g225^ Het groups had the most severe phenotypes (estimate = 0.07, 95% CI: 0.04–0.11, p < 0.001 and estimate = 0.09, 95% CI: 0.06–0.14, p < 0.001, respectively). The cd^g384del^ Het group also showed markedly reduced survival (estimate = 0.20, 95% CI: 0.12–0.32, p < 0.001). cd^g384^ Het mosquitoes showed a non-significant trend toward longer survival than the reference (estimate = 1.49, 95% CI: 0.93–2.36, p = 0.095). Within the cd^g384^ line, homozygotes survived considerably less well than cd^225R^ Hom (estimate = 0.40, 95% CI: 0.25–0.63, p < 0.001), whilst WT siblings survived longer (estimate = 2.03, 95% CI: 1.28–3.23, p = 0.003). WT survival did not differ significantly from the reference in the cd^g384del^ line (estimate = 1.19, 95% CI: 0.75–1.90, p = 0.457), and the cd^g338-384^ WT estimate was highly unstable (estimate = 514758.94, 95% CI: 0.00–Inf, p = 0.996), consistent with near-complete survival in that group. cd^225R^ WT mosquitoes did not differ significantly from cd^225R^ Hom (estimate = 0.70, 95% CI: 0.44–1.11, p = 0.130). cd^g225^ WT mosquitoes survived substantially longer than the reference (estimate = 2.73, 95% CI: 1.71–4.34, p < 0.001).
+
+```{r}
+blood_feeding_labels_html <- c(
+  "(Intercept)"                  = "Intercept (<em>cd</em><sup>225R</sup> Hom)",
+  "line_treatment1759_Het"       = "<em>cd</em><sup>g384</sup> Het",
+  "line_treatment1759_Hom"       = "<em>cd</em><sup>g384</sup> Hom",
+  "line_treatment1759_WT"        = "<em>cd</em><sup>g384</sup> WT",
+  "line_treatment2072_Het"       = "<em>cd</em><sup>g384del</sup> Het",
+  "line_treatment2072_WT"        = "<em>cd</em><sup>g384del</sup> WT",
+  "line_treatment2301_Het"       = "<em>cd</em><sup>g338-384</sup> Het",
+  "line_treatment2301_WT"        = "<em>cd</em><sup>g338-384</sup> WT",
+  "line_treatment2360B5_Het"     = "<em>cd</em><sup>g225</sup> Het",
+  "line_treatment2360B5_WT"      = "<em>cd</em><sup>g225</sup> WT",
+  "line_treatmentD251_WT"        = "<em>cd</em><sup>225R</sup> WT"
+)
+
+tab_model(weibull_bf$model,
+          pred.labels = blood_feeding_labels_html,
+          show.re.var = FALSE)
+```
+
+```{r}
+survival_after_blood
+```
+
+## TransHet survival
+
+To assess whether the post-blood-feeding survival phenotype is caused by disruption of cardinal function, survival data were modelled for the 2360B5 and D251 lines specifically, using a Weibull parametric model (n = 186). Predictors were line (2360B5 vs D251) and genotype (Het, Hom, WT), with the reference group being 2360B5 Het.
+
+D251 Het mosquitoes did not differ significantly from 2360B5 Het (estimate = 0.97, 95% CI: 0.40–2.34, p = 0.944). D251 WT mosquitoes showed dramatically extended survival relative to 2360B5 Het (estimate = 12218566.26, 95% CI: 0.00–Inf, p = 0.997), though the estimate is highly unstable, suggesting complete or near-complete separation in the data. Within the 2360B5 line, WT mosquitoes survived substantially longer than Het mosquitoes (estimate = 26.66, 95% CI: 11.04–64.38, p < 0.001). These results indicate that WT mosquitoes in both lines survive much longer than their KI heterozygote counterparts, but do not provide clear evidence that the D251 KO allele rescues the KI survival phenotype.
+
+```{r}
+transhet_labels_html <- c(
+  "(Intercept)"              = "Intercept",
+  "line_treatmentD251:2360Het"   = "Trans-het",
+  "line_treatmentD251:2360WT"   = "Het<sup>KO</sup>",
+  "line_treatment2360WT"  = "WT",
+  "line_treatment2360Het"    = "Het"
+)
+
+tab_model(weibull_th$model,
+          pred.labels = transhet_labels_html,
+          show.re.var = FALSE)
+```
+
+```{r}
+transhet_survival
+```
+
+## Smurf assay
+
+```{r, include = FALSE}
+source("scripts/smurf.R")
+```
+
+Midgut integrity was assessed using the smurf assay. The proportion of smurf-positive mosquitoes (indicating gut barrier disruption) was modelled using a binomial GLM with genotype, delivery treatment (sucrose, TRP, NaOH), and their interaction as predictors (n = 27 cage-level observations; XA delivery excluded). The reference group was WT mosquitoes on sucrose.
+
+KI mosquitoes on sucrose had a dramatically elevated smurf rate compared to WT controls (OR = 65.61, 95% CI: 25.70–205.20, p < 0.001), confirming that the cardinal KI allele causes significant gut barrier disruption after blood feeding. The KO genotype on sucrose showed a smurf rate consistent with zero events (estimate approaching 0, p = 0.996), reflecting complete separation and no observed smurf-positive cases. NaOH delivery did not significantly alter smurf rate in either WT (OR = 0.62, p = 0.487) or KI mosquitoes relative to their respective sucrose groups (KI × NaOH interaction: OR = 0.55, p = 0.431). TRP-related terms showed extreme estimates driven by complete separation, preventing reliable interpretation. Taken together, the data indicate that the KI phenotype includes midgut barrier disruption, and that pH adjustment via NaOH does not significantly rescue this defect.
+
+```{r}
+tab_model(smurf_model,
+       #   string.pred = line_labels_html,
+          show.re.var = FALSE)
+```
+
+```{r}
+p_smurf
+```
+
+### Alternative figure as bar chart
+
+```{r}
+
+p_smurf2
+
+```
+
+## XA Supplementation
+
+```{r, include = FALSE}
+source("scripts/supplementation_data.R")
+```
+
+The effect of xanthurenic acid (XA) supplementation on post-blood-feeding survival was examined using a Weibull parametric survival model (n = 387). Predictors were supplementation route (blood vs sugar), XA dose (0, 6, or 24 mM), genotype (Het vs WT), and whether XA was present (c_minus: "+" = XA present, "−" = NaOH control), with an interaction between route and XA presence. The reference group was Het mosquitoes receiving blood supplementation at 0 mM in the NaOH control condition.
+
+Sugar supplementation was associated with substantially longer survival than blood supplementation (estimate = 1.96, 95% CI: 1.39–2.78, p < 0.001). WT mosquitoes survived considerably longer than Het mosquitoes across conditions (estimate = 4.69, 95% CI: 2.69–8.19, p < 0.001). A dose of 6 mM XA significantly extended survival relative to the 0 mM condition (estimate = 1.34, 95% CI: 1.03–1.76, p = 0.031), while 24 mM XA did not differ significantly from 0 mM (estimate = 0.90, p = 0.409). The presence of XA (c+ condition) was associated with longer survival overall compared to NaOH control (estimate = 1.59, 95% CI: 1.13–2.21, p = 0.007). The interaction between sugar supplementation and XA presence showed a trend toward a reduced benefit of XA in the sugar route (estimate = 0.69, 95% CI: 0.46–1.02, p = 0.064), though this did not reach statistical significance. These results indicate that 6 mM XA supplementation via the blood route partially rescues the post-blood-feeding survival defect in KI heterozygotes.
+
+```{r}
+tab_model(model_4,
+      #    string.pred = line_labels_html,
+          show.re.var = FALSE)
+```
+
+```{r}
+XA_suppl
+```
+
+
+## Homozygous Survival
+
+```{r, include = FALSE}
+source("scripts/hom_survival.R")
+```
+
+Homozygous viability was assessed by scoring adult eclosion from balanced crosses. The proportion of adults eclosing out of an expected 200 was modelled with a binomial GLM including line (1759 vs QA383P), genotype (HET, HOM, WT), sex, and all two- and three-way interactions (n = 24 observations). The reference cell was 1759, HET, female.
+
+Homozygous 1759 females showed near-complete failure to eclose (Genotype HOM: OR = 0.01, 95% CI: 0.00–0.02, p < 0.001), demonstrating strong homozygous lethality in this KI line. WT 1759 females also showed slightly reduced eclosion relative to HET females (OR = 0.75, 95% CI: 0.56–0.99, p = 0.040). In 1759, homozygous males survived substantially better than homozygous females (HOM × male: OR = 23.76, 95% CI: 8.30–100.36, p < 0.001), indicating a sex-specific partial rescue of homozygous lethality. WT males also had modestly higher eclosion than WT females (WT × male: OR = 1.70, 95% CI: 1.15–2.52, p = 0.008). The QA383P line showed strikingly different homozygous viability: QA383P HOM females eclosed at near-normal rates relative to 1759 HET females (QA383P × HOM interaction: OR = 163.35, 95% CI: 58.53–681.41, p < 0.001), indicating that the KO allele does not share the strong homozygous lethality of the KI. However, the three-way interaction (QA383P × HOM × male: OR = 0.03, 95% CI: 0.01–0.09, p < 0.001) indicates that the sex-specific rescue seen in 1759 is reversed in QA383P, with QA383P HOM males ecloding less well than QA383P HOM females.
+
+```{r}
+hom_survival_labels_html <- c(
+  "(Intercept)"                  = "Intercept (<em>cd</em><sup>384R</sup> HET female)",
+  "line1759"                     = "<em>cd</em><sup>g384</sup>",
+  "GenotypeHOM"                  = "HOM",
+  "GenotypeWT"                   = "WT",
+  "Sexmale"                      = "Male",
+  "line1759:GenotypeHOM"         = "<em>cd</em><sup>g384</sup> &times; HOM",
+  "line1759:GenotypeWT"          = "<em>cd</em><sup>g384</sup> &times; WT",
+  "line1759:Sexmale"             = "<em>cd</em><sup>g384</sup> &times; Male",
+  "GenotypeHOM:Sexmale"          = "HOM &times; Male",
+  "GenotypeWT:Sexmale"           = "WT &times; Male",
+  "line1759:GenotypeHOM:Sexmale" = "<em>cd</em><sup>g384</sup> &times; HOM &times; Male",
+  "line1759:GenotypeWT:Sexmale"  = "<em>cd</em><sup>g384</sup> &times; WT &times; Male"
+)
+
+tab_model(model,
+          pred.labels = hom_survival_labels_html)
+```
+
+
+## qPCR
+
+```{r, include = FALSE}
+source("scripts/delta_delta_ct_script.R")
+```
+
+```{r}
+results$Cardinal_Rps7$plot
+
+
+```
+
+
+
+```{r}
+
+results$Cardinal_GADPH$plot
+
+```

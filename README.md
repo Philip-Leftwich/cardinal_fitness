@@ -1,6 +1,6 @@
 ## Fertility
 
-A lot of work - think it is now fixed!!!!
+
 
 1759 = cdg384
 2360B5 = cdg225
@@ -8,6 +8,16 @@ A lot of work - think it is now fixed!!!!
 2301 = cdg338-384
 D251 = cd225R
 QA383P = cd384R
+
+Transhet figures: The D251:2360 samples are actually D251HET and Trans-het and not WT and HET – see picture below:
+
+Figure 2 survival after Smurf
+qPCR
+
+
+## Survival after blood feeding - 
+colours and order of genotypes?
+
 
 
 # Fig 2. Done! 

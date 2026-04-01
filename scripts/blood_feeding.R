@@ -1,11 +1,4 @@
-library(tidyverse)
-library(survival)
-library(survminer)
-library(readxl)
-library(patchwork)
-library(gtsummary)
-library(flexsurv)
-library(broom)
+source(here::here("scripts", "packages.R"))
 
 # ── Shared lookups ─────────────────────────────────────────────────────────────
 
