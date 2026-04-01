@@ -1,5 +1,9 @@
 ---
 title: "cardinal fitness — results summaries"
+execute:
+  echo: false
+  warning: false
+  message: false
 format:
   html:
     embed-resources: true
@@ -138,7 +142,8 @@ transhet_labels_html <- c(
 tab_model(
   weibull_th$model,
   pred.labels = transhet_labels_html,
-  show.re.var = FALSE
+  show.re.var = FALSE,
+  digits = 3
 )
 ```
 
@@ -173,6 +178,23 @@ p_smurf
 ```{r}
 
 p_smurf2
+
+```
+
+
+### Survival after Smurf
+
+```{r}
+
+survival_after_smurf_plot
+
+```
+
+### Survival separated by smurf
+
+```{r}
+
+survival_by_smurf_plot
 
 ```
 

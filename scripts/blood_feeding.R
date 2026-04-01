@@ -29,7 +29,9 @@ surv_df <- pred_weibull(
     into = c("line", "treatment"),
     sep = "_",
     extra = "merge"
-  )
+  )|>
+  mutate(lcl = if_else(est > 0.999, 1, lcl))
+
 
 km_df <- tidy_km(data_long, Surv(Hours, event) ~ line_treatment) |>
   separate(strata, into = c("line", "treatment"), sep = "_", extra = "merge")
@@ -84,7 +86,8 @@ surv_df_trans <- pred_weibull(
   mutate(
     treatment = str_extract(line_treatment, "Het|WT"),
     line = str_remove(line_treatment, "Het|WT")
-  )
+  ) |>
+  mutate(lcl = if_else(est > 0.999, 1, lcl))
 
 km_df_transhet <- tidy_km(data_transhet, Surv(Hours, event) ~ line_treatment) |>
   mutate(
@@ -126,3 +129,4 @@ transhet_plots <- imap(
 )
 
 transhet_survival <- transhet_plots$`2360` + transhet_plots$`D251:2360`
+transhet_survival

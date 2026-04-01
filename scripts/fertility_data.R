@@ -49,6 +49,22 @@ cross_order <- c("WT", "HETxSDA", "SDAxHET", "HOMxSDA", "SDAxHOM")
 
 line_order <- c("QA383P", "2360B5", "1759")
 
+fertility_data <- fertility_data |>
+  mutate(
+    cross = case_when(
+      cross == "CdKO(het)xSDA" ~ "HETxSDA",
+      cross == "SDAxCdKO(het)" ~ "SDAxHET",
+      cross == "CdKO(hom)xSDA" ~ "HOMxSDA",
+      cross == "SDAxCdKO(hom)" ~ "SDAxHOM",
+      cross %in% c("WTxSDA", "SDAxWT", "SDAxSDA") ~ "WT",
+      .default = as.character(cross)
+    )
+  ) |>
+  drop_na(cross) |>
+  mutate(cross = factor(cross, levels = cross_order)) |>
+  mutate(line = factor(line, levels = line_order)) |>
+  unite("line_cross", line, cross, remove = FALSE)
+
 egg_model <- glmmTMB(
   eggs ~ line * cross + (1 | rep / plate_well),
   family = nbinom1(),

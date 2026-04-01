@@ -192,7 +192,10 @@ XA_suppl <- ggplot(
     colour = NA
   ) +
   geom_line(aes(alpha = I(alpha_val)), linewidth = 0.8) +
-  facet_grid(experiment + panel_c ~ genotype) +
+  facet_grid(
+  experiment + panel_c ~ genotype,
+  labeller = labeller(experiment = label_wrap_gen(width = 15))
+) +
   suppl_scales +
   labs(
     caption = "Solid: focal C± group  |  Faded: opposite group for comparison"
