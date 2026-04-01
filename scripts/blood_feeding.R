@@ -5,197 +5,250 @@ library(readxl)
 library(patchwork)
 library(gtsummary)
 library(flexsurv)
-library(gghighlight)
+library(broom)
 
-## Survival after BF====
-path <- "clean_data/SurvivalAfterBFData.xlsx"
+# ── Shared lookups ─────────────────────────────────────────────────────────────
 
-data <- path %>% 
-  excel_sheets() %>% 
-  set_names() %>% 
-  map_df(~ read_excel(path = path, sheet = .x), .id = "line")
-
-
-data_long <- data %>% 
-  pivot_longer(cols = `WT`:`Hom`, 
-               names_to = "treatment", 
-               values_to = "event") %>% 
-  drop_na(event) %>% 
-#  filter(line %in% c("1759", "2360", "2072")) %>% 
-  unite("line_treatment", c(line,treatment),
-        remove = FALSE)
-
-
-
-# Function to fit model
-fit_model <- function(dist) {
-  tryCatch(
-    flexsurvreg(Surv(`Hours`, event) ~ treatment + line, data = data_long, dist = dist),
-    error = function(e) NULL  # return NULL if model fails
-  )
-}
-
-
-# Fit all models
-#models <- lapply(dists, fit_model)
-#names(models) <- dists
-
-# Remove failed models
-#models <- models[!sapply(models, is.null)]
-
-# Extract model comparison metrics
-#model_comparison <- bind_rows(lapply(models, function(mod) {
-#  data.frame(
-#    AIC = AIC(mod),
-#    BIC = BIC(mod),
-#    LogLik = logLik(mod)
-#  )
-#}))
-#model_comparison$names <- dists
-# Print model comparison
-#print(model_comparison)
-
-# model <- flexsurvreg(Surv(`Hours`, event) ~  treatment + line,
-#                       data = data_long, dist = "weibull")
-
-model <- flexsurvreg(Surv(`Hours`, event) ~  line_treatment,
-                     data = data_long, dist = "weibull")
-
-model_summary <- tidy(model, conf.int = TRUE, exponentiate = TRUE) %>%
-  mutate(across(where(is.numeric), ~round(., 3)))
-
-# Hazard ratios (exponentiated coefficients)
-model_summary
-
-# tab_model(model)
-
-# Generate predicted survival curves
-pred_data <- expand_grid(
-  line_treatment = unique(data_long$line_treatment)
+line_labels <- c(
+  "1759" = "italic(cd)^g384",
+  "2360B5" = "italic(cd)^g225",
+  "2072" = "italic(cd)^g384_del",
+  "2301" = "italic(cd)^{g338-384}",
+  "D251" = "italic(cd)^{225*R}",
+  "QA383P" = "italic(cd)^{384*R}"
 )
 
-# Calculate survival predictions
-surv_pred <- summary(model, newdata = pred_data, 
-                     type = "survival", 
-                     t = seq(0, max(data_long$Hours), length.out = 108),
-                     tidy = TRUE)
+treatment_colours <- c(
+  "WT" = "#4D4D4D",
+  "Het" = "#E69F00",
+  "Hom" = "#56B4E9"
+)
 
-# Convert to data frame for plotting
-surv_df <- as_tibble(surv_pred) %>% 
-  separate(line_treatment,
-           c("line", "treatment"))
+# ── Helper functions ───────────────────────────────────────────────────────────
 
-# Kaplan-Meier estimates for overlay
-km_fit <- survfit(Surv(Hours, event) ~ line_treatment, data = data_long)
+# Fit Weibull model and return tidy HR summary
+fit_weibull <- function(data, formula) {
+  model <- flexsurvreg(formula, data = data, dist = "weibull")
+  model$call$data <- substitute(data)
+  model$call$formula <- substitute(formula)
+  summary <- tidy(model, conf.int = TRUE, exponentiate = TRUE) |>
+    mutate(across(where(is.numeric), ~ round(.x, 3)))
+  list(model = model, summary = summary)
+}
 
-km_df <- broom::tidy(km_fit) |>
-  mutate(strata = str_remove(strata, "line_treatment="))  |> 
-  separate(strata, into = c("line", "treatment"), sep = "_",
-           extra = "merge")
+# Predict survival from a fitted flexsurvreg model
+pred_weibull <- function(model, data, t_max, n_t = 108) {
+  pred_data <- expand_grid(line_treatment = unique(data$line_treatment))
+  summary(
+    model,
+    newdata = pred_data,
+    type = "survival",
+    t = seq(0, t_max, length.out = n_t),
+    tidy = TRUE
+  ) |>
+    as_tibble()
+}
 
-# Visualisation: Weibull model ribbons + KM step lines
-survival_after_blood <- ggplot(surv_df, aes(x = time, y = est,
-                    fill = factor(treatment))) +
-  # Model 95% CI ribbon
+# Tidy Kaplan-Meier fit, stripping strata prefix
+tidy_km <- function(data, formula) {
+  km_fit <- survfit(formula, data = data)
+  strata_prefix <- paste0(all.vars(formula[[3]]), "=")
+  broom::tidy(km_fit) |>
+    mutate(
+      strata = str_remove_all(strata, paste(strata_prefix, collapse = "|"))
+    )
+}
+
+# Build one transhet panel: filter surv_df/km_df by line_val, apply custom scales
+plot_transhet_panel <- function(
+  surv_df,
+  km_df,
+  line_val,
+  legend_title,
+  legend_labels,
+  plot_title,
+  show_y_label = TRUE
+) {
+  p <- ggplot(
+    filter(surv_df, line == line_val),
+    aes(
+      x = time,
+      y = est,
+      colour = treatment,
+      linetype = treatment,
+      fill = treatment
+    )
+  ) +
+    geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.15, colour = NA) +
+    geom_line(linewidth = 0.8) +
+    geom_step(
+      data = filter(km_df, line == line_val),
+      aes(x = time, y = estimate, colour = treatment, linetype = treatment),
+      linewidth = 0.5,
+      inherit.aes = FALSE
+    ) +
+    scale_colour_manual(
+      values = c("Het" = "#E69F00", "WT" = "#4D4D4D"),
+      name = legend_title,
+      labels = legend_labels
+    ) +
+    scale_fill_manual(
+      values = c("Het" = "#E69F00", "WT" = "#4D4D4D"),
+      name = legend_title,
+      labels = legend_labels
+    ) +
+    scale_linetype_manual(
+      values = c("Het" = "solid", "WT" = "dashed"),
+      name = legend_title,
+      labels = legend_labels
+    ) +
+    ggtitle(plot_title) +
+    transhet_theme
+
+  if (!show_y_label) {
+    p <- p + labs(y = NULL)
+  }
+  p
+}
+
+# Shared theme for transhet panels
+transhet_theme <- list(
+  scale_y_continuous(limits = c(0, 1)),
+  labs(
+    x = "Time (Hours)",
+    y = "Survival Probability",
+    caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier"
+  ),
+  theme_bw(base_size = 12),
+  theme(
+    axis.text.x = element_text(angle = 35, hjust = 1),
+    legend.text = ggtext::element_markdown(),
+    legend.title = ggtext::element_markdown(),
+    panel.grid.minor = element_blank()
+  )
+)
+
+# ── Survival after blood feeding ───────────────────────────────────────────────
+
+path <- "clean_data/SurvivalAfterBFData.xlsx"
+
+data_long <- path |>
+  excel_sheets() |>
+  set_names() |>
+  map(\(s) read_excel(path = path, sheet = s)) |>
+  list_rbind(names_to = "line") |>
+  pivot_longer(cols = WT:Hom, names_to = "treatment", values_to = "event") |>
+  drop_na(event) |>
+  unite("line_treatment", c(line, treatment), remove = FALSE) |>
+  mutate(line_treatment = fct_relevel(line_treatment, "D251_Hom"))
+
+weibull_bf <- fit_weibull(data_long, Surv(Hours, event) ~ line_treatment)
+weibull_bf$summary
+
+surv_df <- pred_weibull(
+  weibull_bf$model,
+  data_long,
+  t_max = max(data_long$Hours)
+) |>
+  separate(
+    line_treatment,
+    into = c("line", "treatment"),
+    sep = "_",
+    extra = "merge"
+  )
+
+km_df <- tidy_km(data_long, Surv(Hours, event) ~ line_treatment) |>
+  separate(strata, into = c("line", "treatment"), sep = "_", extra = "merge")
+
+survival_after_blood <- ggplot(
+  surv_df,
+  aes(x = time, y = est, fill = factor(treatment))
+) +
   geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2) +
-  # Weibull model predicted line
   geom_line(aes(colour = factor(treatment))) +
-  # KM empirical step line
   geom_step(
     data = km_df,
     aes(x = time, y = estimate, colour = factor(treatment)),
-    linetype = "dashed", linewidth = 0.5, inherit.aes = FALSE
+    linetype = "dashed",
+    linewidth = 0.5,
+    inherit.aes = FALSE
   ) +
   scale_y_continuous(limits = c(0, 1)) +
-  labs(x = "Time (Hours)",
-       y = "Survival Probability",
-       colour = "Treatment",
-       fill = "Treatment",
-       caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier") +
-  scale_colour_brewer(palette = "Dark2", name = "Treatment") +
-  scale_fill_brewer(palette = "Dark2", name = "Treatment") +
-  facet_wrap(~line) +
+  scale_colour_manual(values = treatment_colours, name = "Treatment") +
+  scale_fill_manual(values = treatment_colours, name = "Treatment") +
+  facet_wrap(~line, labeller = as_labeller(line_labels, label_parsed)) +
+  labs(
+    x = "Time (Hours)",
+    y = "Survival Probability",
+    caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier"
+  ) +
   theme_bw(base_size = 12) +
   theme(
     axis.text.x = element_text(angle = 35, hjust = 1),
     panel.grid.minor = element_blank()
   )
 
+# ── Trans-het survival ─────────────────────────────────────────────────────────
 
-## TransHet survival plot
-
- data_transhet <- read_excel("clean_data/TransHetSurvivalData.xlsx") %>% 
-  pivot_longer(cols = `2360Het`:`D251:2360WT`, 
-               names_to = "line_treatment", 
-               values_to = "event") %>% 
-  drop_na(event) 
-
-data_transhet <- data_transhet |>
+data_transhet <- read_excel("clean_data/TransHetSurvivalData.xlsx") |>
+  pivot_longer(
+    cols = `2360Het`:`D251:2360WT`,
+    names_to = "line_treatment",
+    values_to = "event"
+  ) |>
+  drop_na(event) |>
   filter(Hours > 0)
 
-model_transhet <- flexsurvreg(Surv(`Hours`, event) ~  line_treatment,
-                     data = data_transhet, dist = "weibull")
+weibull_th <- fit_weibull(data_transhet, Surv(Hours, event) ~ line_treatment)
+weibull_th$summary
 
-model_summary_transhet <- tidy(model_transhet, conf.int = TRUE, exponentiate = TRUE) %>%
-  mutate(across(where(is.numeric), ~round(., 3)))
-
-# Hazard ratios (exponentiated coefficients)
-model_summary_transhet
-
-
-
-# Generate predicted survival curves
-pred_data_transhet <- expand_grid(
-  line_treatment = unique(data_transhet$line_treatment)
-)
-
-# Calculate survival predictions
-surv_pred_trans <- summary(model_transhet, newdata = pred_data_transhet, 
-                     type = "survival", 
-                     t = seq(0, max(data_long$Hours), length.out = 108),
-                     tidy = TRUE)
-
-# Convert to data frame for plotting
-surv_df_trans <- as_tibble(surv_pred_trans) %>% 
+surv_df_trans <- pred_weibull(
+  weibull_th$model,
+  data_transhet,
+  t_max = max(data_long$Hours)
+) |>
   mutate(
     treatment = str_extract(line_treatment, "Het|WT"),
-    line      = str_remove(line_treatment, "Het|WT")
+    line = str_remove(line_treatment, "Het|WT")
   )
 
-# Kaplan-Meier estimates for overlay
-km_fit_transhet <- survfit(Surv(Hours, event) ~ line_treatment, data = data_transhet)
-
-km_df_transhet <- broom::tidy(km_fit_transhet) |>
-  mutate(strata = str_remove(strata, "line_treatment=")) |>
+km_df_transhet <- tidy_km(data_transhet, Surv(Hours, event) ~ line_treatment) |>
   mutate(
     treatment = str_extract(strata, "Het|WT"),
-    line      = str_remove(strata, "Het|WT")
+    line = str_remove(strata, "Het|WT")
   )
 
-# Visualisation: Weibull model ribbons + KM step lines
-transhet_survival <- ggplot(surv_df_trans, aes(x = time, y = est, 
-                    fill = factor(treatment))) +
-  # Model 95% CI ribbon
-  geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2) +
-  # Weibull model predicted line
-  geom_line(aes(colour = factor(treatment))) +
-  # KM empirical step line
-  geom_step(
-    data = km_df_transhet,
-    aes(x = time, y = estimate, colour = factor(treatment)),
-    linetype = "dashed", linewidth = 0.5, inherit.aes = FALSE
-  ) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(x = "Time (Hours)", 
-       y = "Survival Probability",
-       colour = "Treatment",
-       fill = "Treatment",
-       caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier") +
-  scale_colour_brewer(palette = "Dark2", name = "Treatment") +
-  scale_fill_brewer(palette = "Dark2", name = "Treatment") +
-  facet_wrap(~line) +
-  theme_bw(base_size = 12) +
-  theme(
-    axis.text.x = element_text(angle = 35, hjust = 1),
-    panel.grid.minor = element_blank()
+# Panel specs: vary only legend title, labels, plot title, and y-axis
+transhet_panels <- list(
+  `2360` = list(
+    legend_title = "<em>cd</em><sup>g225</sup>",
+    legend_labels = c("Het" = "Het", "WT" = "WT"),
+    plot_title = expression(italic(cd)^g225),
+    show_y_label = TRUE
+  ),
+  `D251:2360` = list(
+    legend_title = "<em>cd</em><sup>225R</sup>",
+    legend_labels = c("Het" = "Het<sup>KO</sup>", "WT" = "Trans-het"),
+    plot_title = expression(
+      italic(cd)^{
+        225 * R
+      }
+    ),
+    show_y_label = FALSE
   )
+)
+
+transhet_plots <- imap(
+  transhet_panels,
+  ~ plot_transhet_panel(
+    surv_df = surv_df_trans,
+    km_df = km_df_transhet,
+    line_val = .y,
+    legend_title = .x$legend_title,
+    legend_labels = .x$legend_labels,
+    plot_title = .x$plot_title,
+    show_y_label = .x$show_y_label
+  )
+)
+
+transhet_survival <- transhet_plots$`2360` + transhet_plots$`D251:2360`
