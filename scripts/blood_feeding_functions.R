@@ -17,6 +17,14 @@ treatment_colours <- c(
   "Hom" = "#56B4E9"
 )
 
+line_colours <- c(
+  "2360B5" = "#8BABD3",
+  "1759" = "#BB8BD3",
+  "D251" = "#FFA040",
+  "QA383P" = "#FFE699",
+  "SDA-500" = "lightgray"
+)
+
 # Shared theme for transhet panels
 transhet_theme <- list(
   scale_y_continuous(limits = c(0, 1)),
@@ -120,6 +128,8 @@ plot_transhet_panel <- function(
   legend_title,
   legend_labels,
   plot_title,
+  colours,
+  linetypes = c("Het" = "solid", "WT" = "dashed"),
   show_y_label = TRUE
 ) {
   p <- ggplot(
@@ -141,17 +151,17 @@ plot_transhet_panel <- function(
       inherit.aes = FALSE
     ) +
     scale_colour_manual(
-      values = c("Het" = "#E69F00", "WT" = "#4D4D4D"),
+      values = colours,
       name = legend_title,
       labels = legend_labels
     ) +
     scale_fill_manual(
-      values = c("Het" = "#E69F00", "WT" = "#4D4D4D"),
+      values = colours,
       name = legend_title,
       labels = legend_labels
     ) +
     scale_linetype_manual(
-      values = c("Het" = "solid", "WT" = "dashed"),
+      values = linetypes,
       name = legend_title,
       labels = legend_labels
     ) +

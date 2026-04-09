@@ -6,9 +6,9 @@ source(here::here("scripts", "smurf_functions.R"))
 path <- "data/smurf.xlsx"
 
 line_labels <- c(
-  "ki" = "italic(cd)^g225",
-  "ko" = "italic(cd)^225",
-  "wt" = "wildtype"
+  "KI" = "italic(cd)^g225",
+  "KO" = "italic(cd)^{225*R}",
+  "WT" = "wildtype"
 )
 
 
@@ -121,7 +121,14 @@ p_smurf <- ggplot(
     shape = 16
   ) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
-  scale_colour_brewer(palette = "Dark2", name = "Genotype") +
+  scale_colour_manual(
+    values = c(
+      "lightgray",
+      "#8BABD3",
+      "#FFA040"
+    ),
+    name = "Genotype"
+  ) +
   labs(
     x = "Genotype",
     y = "Smurf rate",
@@ -165,8 +172,22 @@ p_smurf2 <- ggplot(
     shape = 16
   ) +
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
-  scale_colour_brewer(palette = "Dark2", name = "Genotype") +
-  scale_fill_brewer(palette = "Dark2", name = "Genotype") +
+  scale_colour_manual(
+    values = c(
+      "lightgray",
+      "#8BABD3",
+      "#FFA040"
+    ),
+    name = "Genotype"
+  ) +
+  scale_fill_manual(
+    values = c(
+      "lightgray",
+      "#8BABD3",
+      "#FFA040"
+    ),
+    name = "Genotype"
+  ) +
   labs(
     x = "Genotype",
     y = "Smurf rate",
@@ -202,7 +223,8 @@ survival_after_smurf <- survival_after_smurf |>
   ) |>
   drop_na(survival) |>
   separate(treatment, into = c("line", "delivery"), sep = "_") |>
-  filter(delivery == "sucrose")
+  filter(delivery == "sucrose") |>
+  mutate(line = str_to_upper(line))
 
 # Weibull model + predicted survival curves
 weibull_after <- fit_weibull_surv(
@@ -214,19 +236,36 @@ model_smurf_surv <- weibull_after$model
 surv_df_smurf <- weibull_after$surv_df
 
 surv_df_smurf <- surv_df_smurf |>
-  mutate(lcl = if_else(est > 0.999, 1, lcl)) # cap CI a
+  mutate(lcl = if_else(est > 0.999, 1, lcl)) |>
+  mutate(line = factor(line, levels = genotype_order))
+
 
 # Kaplan-Meier estimates for overlay
 km_df_smurf <- tidy_km(survival_after_smurf, Surv(hours, survival) ~ line) |>
-  rename(line = strata)
+  rename(line = strata) |>
+  mutate(line = factor(line, levels = genotype_order))
 
 # Visualisation
 survival_after_smurf_plot <- plot_surv(
   surv_df = surv_df_smurf,
   km_df = km_df_smurf,
   colour_var = "line",
-  colour_scale = scale_colour_brewer(palette = "Dark2", name = "Genotype"),
-  fill_scale = scale_fill_brewer(palette = "Dark2", name = "Genotype"),
+  colour_scale = scale_colour_manual(
+    values = c(
+      "lightgray",
+      "#8BABD3",
+      "#FFA040"
+    ),
+    name = "Genotype"
+  ),
+  fill_scale = scale_fill_manual(
+    values = c(
+      "lightgray",
+      "#8BABD3",
+      "#FFA040"
+    ),
+    name = "Genotype"
+  ),
   extra_layers = facet_wrap(
     ~line,
     labeller = as_labeller(line_labels, label_parsed)
@@ -265,7 +304,7 @@ survival_by_smurf <- survival_by_smurf |>
 
 
 # Weibull model + predicted survival curves
-smurf_colours <- c("Smurf-positive" = "#E69F00", "Smurf-negative" = "#4D4D4D")
+smurf_colours <- c("Smurf-positive" = "#4B779D", "Smurf-negative" = "#606060")
 
 weibull_by <- fit_weibull_surv(
   data = survival_by_smurf,

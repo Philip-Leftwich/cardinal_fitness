@@ -29,7 +29,7 @@ surv_df <- pred_weibull(
     into = c("line", "treatment"),
     sep = "_",
     extra = "merge"
-  )|>
+  ) |>
   mutate(lcl = if_else(est > 0.999, 1, lcl))
 
 
@@ -101,16 +101,18 @@ transhet_panels <- list(
     legend_title = "<em>cd</em><sup>g225</sup>",
     legend_labels = c("Het" = "Het", "WT" = "WT"),
     plot_title = expression(italic(cd)^g225),
+    colours = c("Het" = "#8BABD3", "WT" = "lightgrey"),
     show_y_label = TRUE
   ),
   `D251:2360` = list(
     legend_title = "<em>cd</em><sup>225R</sup>",
-    legend_labels = c("Het" = "Het<sup>KO</sup>", "WT" = "Trans-het"),
+    legend_labels = c("WT" = "Het<sup>KO</sup>", "Het" = "Trans-het"),
     plot_title = expression(
       italic(cd)^{
         225 * R
       }
     ),
+    colours = c("Het" = "darkgreen", "WT" = "#FFA040"),
     show_y_label = FALSE
   )
 )
@@ -123,6 +125,7 @@ transhet_plots <- imap(
     line_val = .y,
     legend_title = .x$legend_title,
     legend_labels = .x$legend_labels,
+    colours = .x$colours,
     plot_title = .x$plot_title,
     show_y_label = .x$show_y_label
   )

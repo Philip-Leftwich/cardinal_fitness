@@ -116,7 +116,7 @@ plot_ddct <- function(data, contrast, plot_title = NULL) {
 #'   against. Default `"SDA-500"`.
 #' @return An `emmGrid` contrast object from [emmeans::contrast()].
 contrast_ddct <- function(data, control = "SDA-500") {
-  model <- glm(delta_delta_Ct ~ Sample * Sex, data = data, family = gaussian)
+  model <- glm(delta_Ct ~ Sample * Sex, data = data, family = gaussian)
   emm <- emmeans(model, ~ Sample | Sex)
   contrast(emm, method = "trt.vs.ctrl", ref = control, adjust = "none")
 }
@@ -159,7 +159,7 @@ tidy_contrast <- function(contrasts, y_positions) {
 #' @param data A tibble from [calc_ddct()].
 #' @return The fitted `glm` object, invisibly.
 check_ddct <- function(data) {
-  model <- glm(delta_delta_Ct ~ Sample * Sex, data = data, family = gaussian)
+  model <- glm(delta_Ct ~ Sample * Sex, data = data, family = gaussian)
   par(mfrow = c(2, 2))
   plot(model)
   par(mfrow = c(1, 1))
