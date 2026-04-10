@@ -22,6 +22,8 @@ source(here::here("scripts", "packages.R"))
 #'   }
 fit_weibull_surv <- function(data, formula, t_max, n_t = 108) {
   model <- flexsurvreg(formula, data = data, dist = "weibull")
+  model$call$data <- substitute(data)
+  model$call$formula <- substitute(formula)
   pred_vars <- all.vars(formula)[-c(1, 2)] # predictor names from formula
   pred_data <- map(pred_vars, ~ unique(data[[.x]])) |>
     setNames(pred_vars) |>
@@ -35,6 +37,7 @@ fit_weibull_surv <- function(data, formula, t_max, n_t = 108) {
   )
   list(model = model, surv_df = as_tibble(surv_pred))
 }
+
 
 #' Fit and tidy a Kaplan-Meier survival curve
 #'

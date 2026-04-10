@@ -123,6 +123,7 @@ larvae_model2 <- glmmTMB(
 # Get emmeans predictions on response scale
 larvae_emm <- get_emm(larvae_model2, cross_order)
 
+
 # Raw proportions (exclude zero-egg wells)
 raw_props <- fertility_data_combined |>
   filter(!is.na(larvae), eggs > 0) |>

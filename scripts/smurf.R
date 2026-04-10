@@ -311,6 +311,7 @@ weibull_by <- fit_weibull_surv(
   formula = Surv(hours, survival) ~ smurf,
   t_max = 120
 )
+
 model_smurf_by <- weibull_by$model
 surv_df_by_smurf <- weibull_by$surv_df
 

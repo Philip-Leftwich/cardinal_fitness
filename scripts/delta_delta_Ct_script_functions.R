@@ -2,7 +2,7 @@ source(here::here("scripts", "packages.R"))
 
 # ── Shared lookups ─────────────────────────────────────────────────────────────
 
-sample_levels <- c("2360B5", "1759", "D251", "QA383P", "SDA-500")
+sample_levels <- c("SDA-500", "2360B5", "1759", "D251", "QA383P")
 
 sample_name <- c(
   "2360B5" = expression(italic(cd)^g225),
@@ -85,16 +85,22 @@ calc_ddct <- function(
 #' @param plot_title Character or `NULL`. Optional plot title. Default `NULL`.
 #' @return A `ggplot` object.
 plot_ddct <- function(data, contrast, plot_title = NULL) {
-  ggplot(data, aes(x = Sample, y = delta_delta_Ct, fill = Sample)) +
+  ggplot(data, aes(x = Sample, y = Relative_Expression, fill = Sample)) +
     geom_boxplot(outlier.shape = NA) +
     geom_jitter(width = 0.2, alpha = 0.6) +
-    facet_grid(. ~ Sex, scales = "free_x", space = "free_x") +
+    facet_grid(. ~ Sex, scales = "free_y") +
     stat_pvalue_manual(contrast) +
-    scale_x_discrete(labels = sample_name) +
+    scale_y_continuous(
+  trans = "log2",
+  name = expression(log[2] ~ "Relative Expression (" * 2^{-Delta*Delta*"Ct"} * ")"),
+  breaks = scales::breaks_log(n = 6, base = 2),
+  labels = scales::label_number(accuracy = 0.01)
+)+
+    scale_x_discrete(labels = sample_name, 
+      limits = rev(levels(data$Sample))) +
     scale_fill_manual(values = id_colors) +
     labs(
       x = NULL,
-      y = expression(Delta * Delta * italic(C)[T]),
       title = plot_title
     ) +
     theme_bw() +
@@ -115,10 +121,51 @@ plot_ddct <- function(data, contrast, plot_title = NULL) {
 #' @param control Character. The reference level in `Sample` to contrast
 #'   against. Default `"SDA-500"`.
 #' @return An `emmGrid` contrast object from [emmeans::contrast()].
-contrast_ddct <- function(data, control = "SDA-500") {
-  model <- glm(delta_Ct ~ Sample * Sex, data = data, family = gaussian)
-  emm <- emmeans(model, ~ Sample | Sex)
-  contrast(emm, method = "trt.vs.ctrl", ref = control, adjust = "none")
+contrast_ddct <- function(data, control = "SDA-500", nperms = 5000) {
+  # Full model
+  model_full <- lm(delta_Ct ~ Sample * Sex, data = data)
+  emm <- emmeans(model_full, ~ Sample | Sex)
+  con_obs <- contrast(emm, method = "trt.vs.ctrl", adjust = "none")
+  obs_stats <- summary(con_obs)$t.ratio
+
+  # Reduced model — removes Sample effect, keeps Sex
+  model_reduced <- lm(delta_Ct ~ Sex, data = data)
+
+  permute <- function(data, model_full, model_reduced) {
+    weights <- sample(c(-1, 1), nrow(data), replace = TRUE)
+    data$delta_Ct_perm <- fitted(model_reduced) +
+      residuals(model_full) * weights
+    fit_perm <- lm(delta_Ct_perm ~ Sample * Sex, data = data)
+    emm_perm <- emmeans(fit_perm, ~ Sample | Sex)
+    con_perm <- contrast(emm_perm, method = "trt.vs.ctrl", adjust = "none")
+    summary(con_perm)$t.ratio
+  }
+
+  set.seed(42)
+  perm_dist <- replicate(nperms, permute(data, model_full, model_reduced))
+  p_raw <- rowMeans(abs(perm_dist) >= abs(obs_stats))
+
+  con_parametric <- summary(con_obs) |>
+    as_tibble()
+
+  con_permuted <- con_parametric |>
+    mutate(p.perm = p_raw)
+
+  diagnostics <- tibble(
+    contrast = con_parametric$contrast,
+    sex = con_parametric$Sex,
+    obs_t = obs_stats,
+    perm_mean = rowMeans(perm_dist),
+    perm_sd = apply(perm_dist, 1, sd)
+  )
+
+  results <- list(
+    parametric = con_parametric,
+    permuted = con_permuted,
+    diagnostics = diagnostics
+  )
+
+  return(results)
 }
 
 #' Tidy emmeans contrasts for use with stat_pvalue_manual
@@ -133,15 +180,15 @@ contrast_ddct <- function(data, control = "SDA-500") {
 #' @return A tibble with columns `group1`, `group2`, `p.value` (as
 #'   significance stars), and `y.position`.
 tidy_contrast <- function(contrasts, y_positions) {
-  summary(contrasts) |>
-    as_tibble() |>
+  report_p <- function(p, digits = 3) {
+    reported <- if_else(p < 0.001, "p < 0.001", paste("p =", round(p, digits)))
+
+    return(reported)
+  }
+
+  contrasts |>
     mutate(
-      p.value = case_when(
-        p.value < 0.001 ~ "***",
-        p.value < 0.01 ~ "**",
-        p.value < 0.05 ~ "*",
-        .default = "n.s."
-      )
+      p.value = report_p(p.perm)
     ) |>
     separate(contrast, into = c("group1", "group2"), sep = " - ") |>
     mutate(

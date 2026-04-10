@@ -14,7 +14,8 @@ data <- data |>
       Genotype == "CdKO Het" ~ "HET",
       Genotype == "CdKO Hom" ~ "HOM",
       .default = as.character(Genotype)
-    )
+    )) |> 
+  mutate(Genotype = factor(Genotype, levels = c("HOME", "HET", "WT"))
   ) |>
   mutate(Sex = str_to_lower(Sex)) |>
   mutate(line = factor(line, levels = line_order))

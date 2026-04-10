@@ -59,6 +59,12 @@ get_emm <- function(model, cross_levels) {
     drop_na()
 }
 
+get_emm_contrasts <- function(model) {
+  emm <- emmeans::emmeans(model, pairwise ~ line | cross)
+  as_tibble(emm$contrasts) |>
+    drop_na()
+}
+
 #' Plot model predictions and raw data for a fertility outcome
 #'
 #' Builds a ggplot showing emmeans point estimates with asymptotic 95\% CIs,
