@@ -1,5 +1,5 @@
 source(here::here("scripts", "packages.R"))
-source(here::here("scripts", "fertility_data_functions.R"))
+source(here::here("scripts", "functions", "fertility_data_functions.R"))
 
 # Read survival data ====
 
@@ -43,6 +43,14 @@ data_list[[3]] <- data_list[[3]] |>
 
 # recombine data
 fertility_data <- rbind(data_list[[1]], data_list[[2]], data_list[[3]])
+
+# Biological plausibility checks ----
+# Hard checks: verify absolute range constraints and cross-column logic
+# before any downstream modelling (produces Figure 1)
+fertility_data <- fertility_data |>
+  verify(eggs >= 0 | is.na(eggs)) |>           # egg counts cannot be negative
+  verify(larvae >= 0 | is.na(larvae)) |>        # larval counts cannot be negative
+  verify(is.na(eggs) | is.na(larvae) | larvae <= eggs)  # larvae cannot exceed eggs
 
 # Cross label order
 cross_order <- c(
@@ -107,7 +115,7 @@ p_fecundity <- plot_fertility(
 
 p_fecundity
 
-#Fertility ====
+# Fertility ====
 
 # Almost all 2360 crosses produced no eggs so hatching model fails to converge
 fertility_data_no2360 <- fertility_data |> filter(line != "2360B5")

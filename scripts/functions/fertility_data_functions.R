@@ -59,6 +59,19 @@ get_emm <- function(model, cross_levels) {
     drop_na()
 }
 
+#' Compute pairwise emmeans contrasts for a fertility model
+#'
+#' Returns pairwise contrasts from a fitted model for two stratifications:
+#' line comparisons within each cross type, and cross comparisons within each
+#' line. Estimates are exponentiated to the ratio scale with 95% CIs.
+#'
+#' @param model A fitted model accepted by [emmeans::emmeans()] (e.g. a
+#'   `glmmTMB` object).
+#' @return A named list with two tibbles:
+#'   \describe{
+#'     \item{line_by_cross}{Pairwise line contrasts within each cross type.}
+#'     \item{cross_by_line}{Pairwise cross contrasts within each line.}
+#'   }
 get_emm_contrasts <- function(model) {
   emm1 <- emmeans::emmeans(model, pairwise ~ line | cross)
   contrasts1 <- as_tibble(emm1$contrasts) |>

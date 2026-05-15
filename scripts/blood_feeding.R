@@ -1,10 +1,10 @@
 source(here::here("scripts", "packages.R"))
-source(here::here("scripts", "blood_feeding_functions.R"))
+source(here::here("scripts", "functions", "blood_feeding_functions.R"))
 
 
 # ── Survival after blood feeding ───────────────────────────────────────────────
 
-path <- "data/SurvivalAfterBFData.xlsx"
+path <- here::here("data", "SurvivalAfterBFData.xlsx")
 
 data_long <- path |>
   excel_sheets() |>
@@ -16,6 +16,13 @@ data_long <- path |>
   unite("line_treatment", c(line, treatment), remove = FALSE) |>
   mutate(line_treatment = fct_relevel(line_treatment, "D251_Hom"))
 
+# Biological plausibility checks ----
+# Hard checks: survival times must be positive and event indicator must be
+# binary; verified before Weibull modelling (produces Figure 2)
+data_long <- data_long |>
+  verify(Hours > 0) |>             # survival time must be positive
+  verify(event %in% c(0, 1))       # event must be binary censoring indicator
+
 weibull_bf <- fit_weibull(data_long, Surv(Hours, event) ~ line_treatment)
 weibull_bf$summary
 
@@ -24,17 +31,17 @@ surv_df <- pred_weibull(
   data_long,
   t_max = max(data_long$Hours)
 ) |>
-  separate(
+  separate_wider_delim(
     line_treatment,
-    into = c("line", "treatment"),
-    sep = "_",
-    extra = "merge"
+    delim = "_",
+    names = c("line", "treatment"),
+    too_many = "merge"
   ) |>
   mutate(lcl = if_else(est > 0.999, 1, lcl))
 
 
 km_df <- tidy_km(data_long, Surv(Hours, event) ~ line_treatment) |>
-  separate(strata, into = c("line", "treatment"), sep = "_", extra = "merge")
+  separate_wider_delim(strata, delim = "_", names = c("line", "treatment"), too_many = "merge")
 
 survival_after_blood <- ggplot(
   surv_df,
@@ -66,7 +73,7 @@ survival_after_blood <- ggplot(
 
 # ── Trans-het survival ─────────────────────────────────────────────────────────
 
-data_transhet <- read_excel("data/TransHetSurvivalData.xlsx") |>
+data_transhet <- read_excel(here::here("data", "TransHetSurvivalData.xlsx")) |>
   pivot_longer(
     cols = `2360Het`:`D251:2360WT`,
     names_to = "line_treatment",

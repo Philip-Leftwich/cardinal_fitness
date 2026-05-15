@@ -1,18 +1,18 @@
 source(here::here("scripts", "packages.R"))
-source(here::here("scripts", "delta_delta_Ct_script_functions.R"))
+source(here::here("scripts", "functions", "delta_delta_Ct_script_functions.R"))
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 
 # Input specifications for each reference gene
 analyses <- list(
   Cardinal_Rps7 = list(
-    file = "data/Cardinal_Rps7_Results_20250611.csv",
+    file = here::here("data", "Cardinal_Rps7_Results_20250611.csv"),
     ref_gene = "rps7",
     title = "Cardinal / rps7",
     y_pos = c("2360B5" = 9, "1759" = 8, "D251" = 7, "QA383P" = 6)
   ),
   Cardinal_GADPH = list(
-    file = "data/Cardinal_GADPH_Results_20250613.csv",
+    file = here::here("data", "Cardinal_GADPH_Results_20250613.csv"),
     ref_gene = "GAPDH",
     title = "Cardinal / GAPDH",
     y_pos = c("2360B5" = 9, "1759" = 8, "D251" = 7, "QA383P" = 6)
@@ -32,7 +32,7 @@ results <- map(analyses, function(a) {
 results$Cardinal_Rps7$plot
 results$Cardinal_GADPH$plot
 
-saveRDS(results, "data/ddCt_results.rds")
+saveRDS(results, here::here("data", "ddCt_results.rds"))
 
 # ── Residual checks ───────────────────────────────────────────────────────────
 
