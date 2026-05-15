@@ -121,7 +121,11 @@ surv_df <- pred_surv(
 
 # ── Shared plot scales and theme ──────────────────────────────────────────────
 
-dose_colours <- c("0mM" = "lightgrey", "6mM" = "#E69F00", "6mM C-" = "#56B4E9")
+dose_colours <- c(
+  "0mM" = "lightgrey",
+  "6mM" = "darkgreen",
+  "6mM C-" = "#56B4E9"
+)
 
 
 #dose_colours <- setNames(RColorBrewer::brewer.pal(3, "Purples"), c("0", "6", "24"))

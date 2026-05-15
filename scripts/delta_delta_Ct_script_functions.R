@@ -7,7 +7,11 @@ sample_levels <- c("SDA-500", "2360B5", "1759", "D251", "QA383P")
 sample_name <- c(
   "2360B5" = expression(italic(cd)^g225),
   "1759" = expression(italic(cd)^g384),
-  "D251" = expression(italic(cd)^225),
+  "D251" = expression(
+    italic(cd)^{
+      "225R"
+    }
+  ),
   "QA383P" = expression(
     italic(cd)^{
       "384R"
@@ -91,13 +95,18 @@ plot_ddct <- function(data, contrast, plot_title = NULL) {
     facet_grid(. ~ Sex, scales = "free_y") +
     stat_pvalue_manual(contrast) +
     scale_y_continuous(
-  trans = "log2",
-  name = expression(log[2] ~ "Relative Expression (" * 2^{-Delta*Delta*"Ct"} * ")"),
-  breaks = scales::breaks_log(n = 6, base = 2),
-  labels = scales::label_number(accuracy = 0.01)
-)+
-    scale_x_discrete(labels = sample_name, 
-      limits = rev(levels(data$Sample))) +
+      trans = "log2",
+      name = expression(
+        log[2] ~ "Relative Expression (" *
+          2^{
+            -Delta * Delta * "Ct"
+          } *
+          ")"
+      ),
+      breaks = scales::breaks_log(n = 6, base = 2),
+      labels = scales::label_number(accuracy = 0.01)
+    ) +
+    scale_x_discrete(labels = sample_name, limits = rev(levels(data$Sample))) +
     scale_fill_manual(values = id_colors) +
     labs(
       x = NULL,

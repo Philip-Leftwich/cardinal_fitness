@@ -17,7 +17,7 @@ line_colours <- c(
   "1759" = "#BB8BD3",
   "D251" = "#FFA040",
   "QA383P" = "#FFE699",
-  "SDA-500" = "lightgray"
+  "SDA-500" = "darkgray"
 )
 
 line_shape <- c("1759" = 16, "2360B5" = 17, "QA383P" = 15)
@@ -33,7 +33,7 @@ fertility_theme <- list(
   labs(x = "Cross"),
   theme_bw(base_size = 12),
   theme(
-    axis.text.x = element_text(angle = 35, hjust = 1),
+    axis.text.x = element_text(hjust = 0.5),
     legend.text = element_text(size = 14),
     panel.grid.minor = element_blank()
   )
@@ -60,10 +60,30 @@ get_emm <- function(model, cross_levels) {
 }
 
 get_emm_contrasts <- function(model) {
-  emm <- emmeans::emmeans(model, pairwise ~ line | cross)
-  as_tibble(emm$contrasts) |>
-    drop_na()
+  emm1 <- emmeans::emmeans(model, pairwise ~ line | cross)
+  contrasts1 <- as_tibble(emm1$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+
+  emm2 <- emmeans::emmeans(model, pairwise ~ cross | line)
+  contrasts2 <- as_tibble(emm2$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+
+  list(
+    line_by_cross = contrasts1,
+    cross_by_line = contrasts2
+  )
 }
+
 
 #' Plot model predictions and raw data for a fertility outcome
 #'
@@ -86,7 +106,6 @@ plot_fertility <- function(
   raw_data,
   raw_y,
   y_label,
-  plot_title,
   y_scale = NULL
 ) {
   p <- ggplot(
@@ -108,7 +127,7 @@ plot_fertility <- function(
       width = 0.25,
       linewidth = 0.8
     ) +
-    labs(y = y_label, title = plot_title) +
+    labs(y = y_label) +
     fertility_theme
 
   if (!is.null(y_scale)) {

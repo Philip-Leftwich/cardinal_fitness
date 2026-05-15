@@ -45,17 +45,34 @@ data_list[[3]] <- data_list[[3]] |>
 fertility_data <- rbind(data_list[[1]], data_list[[2]], data_list[[3]])
 
 # Cross label order
-cross_order <- c("WT", "HETxSDA", "SDAxHET", "HOMxSDA", "SDAxHOM")
+cross_order <- c(
+  "WT",
+  "Female \nHET",
+  "Male \nHET",
+  "Female \nHOM",
+  "Male \nHOM"
+)
 
 line_order <- c("QA383P", "2360B5", "1759")
 
 fertility_data <- fertility_data |>
   mutate(
     cross = case_when(
-      cross == "CdKO(het)xSDA" ~ "HETxSDA",
-      cross == "SDAxCdKO(het)" ~ "SDAxHET",
-      cross == "CdKO(hom)xSDA" ~ "HOMxSDA",
-      cross == "SDAxCdKO(hom)" ~ "SDAxHOM",
+      # 2360B5
+      line == "2360B5" & cross == "HETxSDA" ~ "Female \nHET",
+      line == "2360B5" & cross == "SDAxHET" ~ "Male \nHET",
+      line == "2360B5" & cross == "HOMxSDA" ~ "Female \nHOM",
+      line == "2360B5" & cross == "SDAxHOM" ~ "Male \nHOM",
+      # QA383P  cross labels
+      line == "QA383P" & cross == "CdKO(het)xSDA" ~ "Male \nHET",
+      line == "QA383P" & cross == "SDAxCdKO(het)" ~ "Female \nHET",
+      line == "QA383P" & cross == "CdKO(hom)xSDA" ~ "Male \nHOM",
+      line == "QA383P" & cross == "SDAxCdKO(hom)" ~ "Female \nHOM",
+      # 1759 cross labels
+      line == "1759" & cross == "HETxSDA" ~ "Male \nHET",
+      line == "1759" & cross == "SDAxHET" ~ "Female \nHET",
+      line == "1759" & cross == "HOMxSDA" ~ "Male \nHOM",
+      line == "1759" & cross == "SDAxHOM" ~ "Female \nHOM",
       cross %in% c("WTxSDA", "SDAxWT", "SDAxSDA") ~ "WT",
       .default = as.character(cross)
     )
@@ -85,8 +102,7 @@ p_fecundity <- plot_fertility(
   emm_data = egg_emm,
   raw_data = raw_eggs,
   raw_y = eggs,
-  y_label = "Egg count",
-  plot_title = "Fecundity: number of eggs laid"
+  y_label = "Egg count"
 )
 
 p_fecundity
@@ -107,8 +123,9 @@ larvae_model <- glmmTMB(
 fertility_data_combined <- fertility_data |>
   filter(
     line %in%
-      c("1759", "QA383P", "WT") |
-      (line == "2360B5" & cross == "SDAxHET")
+      c("1759", "QA383P") |
+      line == "2360B5" & cross == "Male \nHET" |
+      line == "2360B5" & cross == "WT"
   ) |>
   unite("line_cross", line, cross, remove = FALSE)
 
@@ -138,7 +155,6 @@ p_fertility <- plot_fertility(
   raw_data = raw_props,
   raw_y = prop,
   y_label = "Hatching rate (larvae / eggs)",
-  plot_title = "Fertility: proportion of eggs hatching to larvae",
   y_scale = scale_y_continuous(
     labels = scales::percent_format(),
     limits = c(0, 1)

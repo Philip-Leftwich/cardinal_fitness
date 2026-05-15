@@ -99,14 +99,20 @@ km_df_transhet <- tidy_km(data_transhet, Surv(Hours, event) ~ line_treatment) |>
 transhet_panels <- list(
   `2360` = list(
     legend_title = "<em>cd</em><sup>g225</sup>",
-    legend_labels = c("Het" = "Het", "WT" = "WT"),
+    legend_labels = c(
+      "Het" = "<em>cd</em><sup>g225</sup> Het",
+      "WT" = "<em>cd</em><sup>g225</sup> WT"
+    ),
     plot_title = expression(italic(cd)^g225),
-    colours = c("Het" = "#8BABD3", "WT" = "lightgrey"),
+    colours = c("Het" = "#8BABD3", "WT" = "darkgrey"),
     show_y_label = TRUE
   ),
   `D251:2360` = list(
     legend_title = "<em>cd</em><sup>225R</sup>",
-    legend_labels = c("WT" = "Het<sup>KO</sup>", "Het" = "Trans-het"),
+    legend_labels = c(
+      "WT" = "<em>cd</em><sup>225R</sup> Het",
+      "Het" = "<em>cd</em><sup>g225</sup>;<em>cd</em><sup>225R</sup> Het"
+    ),
     plot_title = expression(
       italic(cd)^{
         225 * R
@@ -117,19 +123,24 @@ transhet_panels <- list(
   )
 )
 
+
 transhet_plots <- imap(
   transhet_panels,
   ~ plot_transhet_panel(
     surv_df = surv_df_trans,
     km_df = km_df_transhet,
     line_val = .y,
-    legend_title = .x$legend_title,
+    legend_title = NULL,
     legend_labels = .x$legend_labels,
     colours = .x$colours,
-    plot_title = .x$plot_title,
+    plot_title = NULL,
     show_y_label = .x$show_y_label
   )
 )
+
+
+transhet_plots$`D251:2360` <- transhet_plots$`D251:2360` +
+  labs(caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier")
 
 transhet_survival <- transhet_plots$`2360` + transhet_plots$`D251:2360`
 transhet_survival

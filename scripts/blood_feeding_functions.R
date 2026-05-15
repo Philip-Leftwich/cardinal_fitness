@@ -30,8 +30,7 @@ transhet_theme <- list(
   scale_y_continuous(limits = c(0, 1)),
   labs(
     x = "Time (Hours)",
-    y = "Survival Probability",
-    caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier"
+    y = "Survival Probability"
   ),
   theme_bw(base_size = 12),
   theme(
@@ -166,7 +165,8 @@ plot_transhet_panel <- function(
       labels = legend_labels
     ) +
     ggtitle(plot_title) +
-    transhet_theme
+    transhet_theme+
+    theme(legend.position = "bottom")
 
   if (!show_y_label) {
     p <- p + labs(y = NULL)

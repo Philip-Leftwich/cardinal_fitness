@@ -123,7 +123,7 @@ p_smurf <- ggplot(
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   scale_colour_manual(
     values = c(
-      "lightgray",
+      "darkgray",
       "#8BABD3",
       "#FFA040"
     ),
@@ -174,7 +174,7 @@ p_smurf2 <- ggplot(
   scale_y_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
   scale_colour_manual(
     values = c(
-      "lightgray",
+      "darkgray",
       "#8BABD3",
       "#FFA040"
     ),
@@ -182,7 +182,7 @@ p_smurf2 <- ggplot(
   ) +
   scale_fill_manual(
     values = c(
-      "lightgray",
+      "darkgray",
       "#8BABD3",
       "#FFA040"
     ),
@@ -252,7 +252,7 @@ survival_after_smurf_plot <- plot_surv(
   colour_var = "line",
   colour_scale = scale_colour_manual(
     values = c(
-      "lightgray",
+      "darkgray",
       "#8BABD3",
       "#FFA040"
     ),
@@ -260,7 +260,7 @@ survival_after_smurf_plot <- plot_surv(
   ),
   fill_scale = scale_fill_manual(
     values = c(
-      "lightgray",
+      "darkgray",
       "#8BABD3",
       "#FFA040"
     ),

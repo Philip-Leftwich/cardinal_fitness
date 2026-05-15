@@ -34,22 +34,37 @@ The cdg384 line had the inverse of this response, with the SDA x HET (0.63, [0.4
 ```{r}
 
 line_labels_html <- c(
-  "(Intercept)" = "Intercept",
-  "line2360B5" = "<em>cd</em><sup>g225</sup>",
-  "line1759" = "<em>cd</em><sup>g384</sup>",
-  "crossHETxSDA" = "HET&times;SDA",
-  "crossSDAxHET" = "SDA&times;HET",
-  "crossHOMxSDA" = "HOM&times;SDA",
-  "crossSDAxHOM" = "SDA&times;HOM",
-  "line1759:crossHETxSDA" = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
-  "line1759:crossSDAxHET" = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
-  "line1759:crossHOMxSDA" = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
-  "line1759:crossSDAxHOM" = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
-  "line2360B5:crossHETxSDA" = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
-  "line2360B5:crossSDAxHET" = "<em>cd</em><sup>g225</sup> × SDA&times;HET"
+  "(Intercept)"                    = "Intercept (QA383P, SDA&times;SDA)",
+  "line2360B5"                     = "<em>cd</em><sup>g225</sup>",
+  "line1759"                       = "<em>cd</em><sup>g384</sup>",
+  "crossFemale \nHET"              = "Female Het",
+  "crossMale \nHET"                = "Male Het",
+  "crossFemale \nHOM"              = "Female Hom",
+  "crossMale \nHOM"                = "Male Hom",
+  "line2360B5:crossFemale \nHET"   = "<em>cd</em><sup>g225</sup> &times; Female Het",
+  "line1759:crossFemale \nHET"     = "<em>cd</em><sup>g384</sup> &times; Female Het",
+  "line2360B5:crossMale \nHET"     = "<em>cd</em><sup>g225</sup> &times; Male Het",
+  "line1759:crossMale \nHET"       = "<em>cd</em><sup>g384</sup> &times; Male Het",
+  "line1759:crossFemale \nHOM"     = "<em>cd</em><sup>g384</sup> &times; Female Hom",
+  "line1759:crossMale \nHOM"       = "<em>cd</em><sup>g384</sup> &times; Male Hom"
 )
 
 tab_model(egg_model, pred.labels = line_labels_html)
+```
+
+```{r}
+cond_emm <- emmeans(egg_model, ~ line * cross, component = "cond", type = "response") |>
+  as_tibble() |>
+  rename(count = response)
+
+# ZI component is intercept-only — extract single p(zero) estimate
+zi_coef <- fixef(egg_model)$zi[["(Intercept)"]]
+p_zero  <- plogis(zi_coef)  # convert log-odds to probability
+
+cond_emm <- cond_emm |>
+  mutate(expected_count = count * (1 - p_zero))
+
+cond_emm
 ```
 
 ```{r}
@@ -70,29 +85,33 @@ All comparisons are relative to WT. Most cross types within the cdg384 line did 
 The single included cdg225 cross (SDA×HET) did  differ significantly from the WT (OR = 0.15, p <0.001). In contrast, all tested cd384R crosses showed equal or higher hatching rates than the WT reference.
 
 ```{r}
-line_labels_html <- c(
-  "(Intercept)" = "Intercept",
-  "line2360B5" = "<em>cd</em><sup>g225</sup>",
-  "line1759" = "<em>cd</em><sup>g384</sup>",
-  "crossHETxSDA" = "HET&times;SDA",
-  "crossSDAxHET" = "SDA&times;HET",
-  "crossHOMxSDA" = "HOM&times;SDA",
-  "crossSDAxHOM" = "SDA&times;HOM",
-  "line1759:crossHETxSDA" = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
-  "line1759:crossSDAxHET" = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
-  "line1759:crossHOMxSDA" = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
-  "line1759:crossSDAxHOM" = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
-  "line2360B5:crossHETxSDA" = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
-  "line2360B5:crossSDAxHET" = "<em>cd</em><sup>g225</sup> × SDA&times;HET",
-  "line2360B5:crossHOMxSDA" = "<em>cd</em><sup>g225</sup> × HOM&times;SDA",
-  "line2360B5:crossSDAxHOM" = "<em>cd</em><sup>g225</sup> × SDA&times;HOM"
+larvae_labels_html <- c(
+  "(Intercept)"                  = "Intercept (QA383P, SDA&times;SDA)",
+  "line2360B5"                   = "<em>cd</em><sup>g225</sup>",
+  "line1759"                     = "<em>cd</em><sup>g384</sup>",
+  "crossFemale \nHET"            = "Female Het",
+  "crossMale \nHET"              = "Male Het",
+  "crossFemale \nHOM"            = "Female Hom",
+  "crossMale \nHOM"              = "Male Hom",
+  "line1759:crossFemale \nHET"   = "<em>cd</em><sup>g384</sup> &times; Female Het",
+  "line1759:crossMale \nHET"     = "<em>cd</em><sup>g384</sup> &times; Male Het",
+  "line1759:crossFemale \nHOM"   = "<em>cd</em><sup>g384</sup> &times; Female Hom",
+  "line1759:crossMale \nHOM"     = "<em>cd</em><sup>g384</sup> &times; Male Hom"
 )
 
-tab_model(larvae_model2, pred.labels = line_labels_html)
+
+tab_model(larvae_model2, pred.labels = larvae_labels_html)
 ```
 
 
+
+
+
+
 ```{r}
+
+emmeans::emmeans(larvae_model2, specs = ~ line + cross, type = "response")
+
 get_emm_contrasts(larvae_model2)
 ```
 
@@ -100,6 +119,12 @@ get_emm_contrasts(larvae_model2)
 p_fertility
 ```
 
+
+```{r}
+
+p_fecundity + p_fertility + plot_layout(guides = "collect") & theme(legend.position = "bottom") & plot_annotation(tag_levels = 'A')
+
+```
 
 ## Survival after Blood Feeding
 
@@ -110,6 +135,8 @@ source("scripts/blood_feeding.R")
 Post-blood-feeding survival was modelled using a Weibull parametric survival model with a single combined line × genotype factor (n = 384). Model estimates are scale factors relative to the reference group (cd^225R^ Hom); values below 1 indicate shorter survival relative to this reference.
 
 All KI heterozygote lines showed substantially reduced survival relative to cd^225R^ Hom. The cd^g338-384^ Het and cd^g225^ Het groups had the most severe phenotypes (estimate = 0.07, 95% CI: 0.04–0.11, p < 0.001 and estimate = 0.09, 95% CI: 0.06–0.14, p < 0.001, respectively). The cd^g384del^ Het group also showed markedly reduced survival (estimate = 0.20, 95% CI: 0.12–0.32, p < 0.001). cd^g384^ Het mosquitoes showed a non-significant trend toward longer survival than the reference (estimate = 1.49, 95% CI: 0.93–2.36, p = 0.095). Within the cd^g384^ line, homozygotes survived considerably less well than cd^225R^ Hom (estimate = 0.40, 95% CI: 0.25–0.63, p < 0.001), whilst WT siblings survived longer (estimate = 2.03, 95% CI: 1.28–3.23, p = 0.003). WT survival did not differ significantly from the reference in the cd^g384del^ line (estimate = 1.19, 95% CI: 0.75–1.90, p = 0.457), and the cd^g338-384^ WT estimate was highly unstable (estimate = 514758.94, 95% CI: 0.00–Inf, p = 0.996), consistent with near-complete survival in that group. cd^225R^ WT mosquitoes did not differ significantly from cd^225R^ Hom (estimate = 0.70, 95% CI: 0.44–1.11, p = 0.130). cd^g225^ WT mosquitoes survived substantially longer than the reference (estimate = 2.73, 95% CI: 1.71–4.34, p < 0.001).
+
+
 
 ```{r}
 blood_feeding_labels_html <- c(
@@ -137,6 +164,22 @@ tab_model(
 survival_after_blood
 ```
 
+
+```{r}
+# Option 1: Omit newdata entirely - gives one estimate per row in your data
+summary(weibull_bf$model, type = "quantile", quantiles = 0.5, ci = TRUE)
+
+```
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(weibull_bf$model,
+        type    = "survival",
+        t       = 300,                        # fixed time point in your time units
+        ci      = TRUE)
+
+```
+
 ## TransHet survival
 
 To assess whether the post-blood-feeding survival phenotype is caused by disruption of cardinal function, survival data were modelled for the 2360B5 and D251 lines specifically, using a Weibull parametric model (n = 186). Predictors were line (2360B5 vs D251) and genotype (Het, Hom, WT), with the reference group being 2360B5 Het.
@@ -158,6 +201,19 @@ tab_model(
   digits = 3
 )
 ```
+
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(weibull_th$model,
+        type    = "survival",
+        t       = 100,                        # fixed time point in your time units
+        ci      = TRUE)
+
+```
+
+
+
 
 ```{r}
 transhet_survival
@@ -204,7 +260,10 @@ tab_model(
 )
 ```
 
+```{r}
 
+emmeans::emmeans(smurf_model, specs = ~ genotype, type = "response")
+```
 
 ```{r}
 p_smurf
@@ -218,6 +277,17 @@ tab_model(
   #   string.pred = line_labels_html,
   show.re.var = FALSE
 )
+```
+
+
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(model_smurf_by,
+        type    = "survival",
+        t       = 72,                        # fixed time point in your time units
+        ci      = TRUE)
+
 ```
 
 ```{r}
@@ -237,6 +307,14 @@ tab_model(
 )
 ```
 
+```{r}
+# Survival probability at a fixed time point, per group
+summary(model_smurf_surv,
+        type    = "survival",
+        t       = 72,                        # fixed time point in your time units
+        ci      = TRUE)
+
+```
 
 ```{r}
 
@@ -293,6 +371,12 @@ tab_model(
 XA_suppl
 ```
 
+```{r}
+summary(model_4,
+        type    = "survival",
+        t       = 72,                        # fixed time point in your time units
+        ci      = TRUE)
+```
 
 ## Homozygous Survival
 
@@ -309,11 +393,17 @@ hom_survival_labels_html <- c(
   "(Intercept)" = "Intercept (<em>cd</em><sup>384R</sup> HET female)",
   "line1759" = "Line (<em>cd</em><sup>g384</sup> vs <em>cd</em><sup>384R</sup>)",
   "GenotypeWT" = "WT",
+  "GenotypeHOM" = "HOM",
   "Sexmale" = "Male",
   "line1759:GenotypeWT" = "<em>cd</em><sup>g384</sup> &times; WT",
+  "line1759:GenotypeHOM" = "<em>cd</em><sup>g384</sup> &times; HOM",
   "line1759:Sexmale" = "<em>cd</em><sup>g384</sup> &times; Male",
+  
   "GenotypeWT:Sexmale" = "WT &times; Male",
-  "line1759:GenotypeWT:Sexmale" = "<em>cd</em><sup>g384</sup> &times; WT &times; Male"
+  "GenotypeHOM:Sexmale" = "HOM &times; Male",
+  
+  "line1759:GenotypeWT:Sexmale" = "<em>cd</em><sup>g384</sup> &times; WT &times; Male",
+  "line1759:GenotypeHOM:Sexmale" = "<em>cd</em><sup>g384</sup> &times; HOM &times; Male"
 )
 
 tab_model(model, pred.labels = hom_survival_labels_html)
