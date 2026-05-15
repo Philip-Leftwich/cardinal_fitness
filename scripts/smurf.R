@@ -206,7 +206,7 @@ p_smurf2
 # Survival after Smurf assay ====
 #########################
 
-path <- "clean_data/SmurfAssayData.xlsx"
+path <- "data/SmurfAssayData.xlsx"
 sheets <- c("Survival")
 
 survival_after_smurf <- read_excel(

@@ -4,7 +4,7 @@ source(here::here("scripts", "blood_feeding_functions.R"))
 
 # ── Survival after blood feeding ───────────────────────────────────────────────
 
-path <- "clean_data/SurvivalAfterBFData.xlsx"
+path <- "data/SurvivalAfterBFData.xlsx"
 
 data_long <- path |>
   excel_sheets() |>
@@ -66,7 +66,7 @@ survival_after_blood <- ggplot(
 
 # ── Trans-het survival ─────────────────────────────────────────────────────────
 
-data_transhet <- read_excel("clean_data/TransHetSurvivalData.xlsx") |>
+data_transhet <- read_excel("data/TransHetSurvivalData.xlsx") |>
   pivot_longer(
     cols = `2360Het`:`D251:2360WT`,
     names_to = "line_treatment",

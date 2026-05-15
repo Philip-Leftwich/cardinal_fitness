@@ -3,7 +3,7 @@ source(here::here("scripts", "supplementation_data_functions.R"))
 
 # Load data ====
 
-path <- "clean_data/XASupplementationData.xlsx"
+path <- "data/XASupplementationData.xlsx"
 
 data <- path |>
   excel_sheets() |>

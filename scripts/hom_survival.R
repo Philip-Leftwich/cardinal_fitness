@@ -1,6 +1,6 @@
 source("scripts/packages.R")
 
-path <- "clean_data/SurvivalData.xlsx"
+path <- "data/SurvivalData.xlsx"
 
 data <- path |>
   excel_sheets() |>
