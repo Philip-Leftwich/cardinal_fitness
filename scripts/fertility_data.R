@@ -3,7 +3,7 @@ source(here::here("scripts", "fertility_data_functions.R"))
 
 # Read survival data ====
 
-filepath <- here::here("clean_data", "FertilityData.xlsx")
+filepath <- here::here("data", "FertilityData.xlsx")
 
 sheets <- excel_sheets(filepath)
 
