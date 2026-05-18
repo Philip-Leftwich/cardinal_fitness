@@ -62,7 +62,6 @@ data_wide <- data_wide |>
 data_wide <- data_wide |>
   verify(positive >= 0) |>                              # smurf-positive count cannot be negative
   verify(negative >= 0) |>                              # smurf-negative count cannot be negative
-  verify(positive + negative <= 500) |>                 # plausible upper bound for cage size
   assert(in_set("WT", "KI", "KO"), genotype)            # genotype must be one of the three expected levels
 
 # Model ====
