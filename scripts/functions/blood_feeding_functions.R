@@ -165,7 +165,7 @@ plot_transhet_panel <- function(
       labels = legend_labels
     ) +
     ggtitle(plot_title) +
-    transhet_theme+
+    transhet_theme +
     theme(legend.position = "bottom")
 
   if (!show_y_label) {

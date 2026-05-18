@@ -1,15 +1,15 @@
 source(here::here("scripts", "packages.R"))
-source(here::here("scripts", "supplementation_data_functions.R"))
+source(here::here("scripts", "functions", "supplementation_data_functions.R"))
 
 # Load data ====
 
-path <- "data/XASupplementationData.xlsx"
+path <- here::here("data", "XASupplementationData.xlsx")
 
 data <- path |>
   excel_sheets() |>
   set_names() |>
-  map_df(~ read_excel(path = path, sheet = .x), .id = "experiment") |>
-
+  map(\(s) read_excel(path = path, sheet = s)) |>
+  list_rbind(names_to = "experiment") |>
   filter(experiment != "Additional assays")
 
 # Shape data ====
@@ -27,7 +27,7 @@ data_long
 # Format data for interaction models
 
 data_long2 <- data_long |>
-  separate(treatment, into = c("genotype", "dosage"), sep = "\\(") |>
+  separate_wider_delim(treatment, delim = " (", names = c("genotype", "dosage")) |>
   mutate(genotype = str_trim(genotype)) |>
   mutate(dosage = str_remove(dosage, "\\)")) |>
   filter(dosage %in% c("0mM", "6mM", "6mM C-")) |>
@@ -35,6 +35,16 @@ data_long2 <- data_long |>
   mutate(
     dosage_mM = factor(dosage, levels = c("0mM", "6mM C-", "6mM"))
   )
+
+# Biological plausibility checks ----
+# Hard checks: survival times must be positive, event indicator must be binary,
+# and genotype/experiment must belong to expected categories;
+# validated before any modelling (produces Figure 4)
+data_long2 <- data_long2 |>
+  verify(Hours > 0) |>                                  # survival time must be positive
+  verify(event %in% c(0, 1)) |>                         # event must be binary (0/1)
+  assert(in_set("WT", "Het"), genotype) |>              # only two expected genotypes
+  assert(in_set("Sugar", "Blood"), experiment)           # only two supplementation routes
 
 
 # ── Distribution comparison ────────────────────────────────────────────────────
@@ -98,8 +108,7 @@ weibull_formulas <- list(
 model_4 <- flexsurvreg(
   Surv(`Hours`, event) ~ experiment +
     dosage_mM +
-    genotype +
-    experiment,
+    genotype,
   data = data_long2,
   dist = "weibull"
 )

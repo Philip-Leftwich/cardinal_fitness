@@ -21,3 +21,6 @@ library(broom)
 library(gtsummary)
 library(sjPlot)
 library(ggpubr)
+
+# Data validation
+library(assertr)

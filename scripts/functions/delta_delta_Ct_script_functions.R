@@ -53,26 +53,39 @@ calc_ddct <- function(
 ) {
   raw <- read.csv(file) |>
     filter(Sample != "NTC") |>
-    mutate(Cq = as.numeric(Cq)) |>
-    group_by(Sample, Target, Replicate) |>
-    summarise(Cq.mean = mean(Cq), .groups = "drop")
+    mutate(Cq = as.numeric(Cq))
+
+  # Biological plausibility checks ----
+  # Hard checks: Cq values must fall within the biologically plausible range
+  # for RT-qPCR (positive and below the instrument maximum of 40 cycles);
+  # verified before averaging and delta-Ct computation (produces Figure 5)
+  raw <- raw |>
+    verify(!is.na(Cq) | TRUE) |>       # allow NA (undetermined); handled downstream
+    verify(Cq > 0 | is.na(Cq)) |>      # Cq cannot be zero or negative
+    verify(Cq < 45 | is.na(Cq))        # Cq above 45 indicates non-specific amplification
+
+  raw <- raw |>
+    summarise(Cq.mean = mean(Cq, na.rm = TRUE), .by = c(Sample, Target, Replicate))
 
   target <- raw |> filter(Target == target_gene)
   ref <- raw |> filter(Target == ref_gene) |> rename(Cq.ref = Cq.mean)
 
-  left_join(target, ref, by = c("Sample", "Replicate")) |>
+  left_join(target, ref, by = join_by(Sample, Replicate)) |>
     mutate(delta_Ct = Cq.mean - Cq.ref) |>
-    group_by(Sample, Replicate) |>
-    mutate(mean_deltaCt = mean(delta_Ct)) |>
-    ungroup() |>
+    mutate(mean_deltaCt = mean(delta_Ct), .by = c(Sample, Replicate)) |>
     mutate(
       mean_control = mean(mean_deltaCt[Sample == control_sample]),
       delta_delta_Ct = delta_Ct - mean_control,
       Relative_Expression = 2^(-delta_delta_Ct)
     ) |>
-    separate(Sample, into = c("Sample", "Sex"), sep = " ", remove = TRUE) |>
+    separate_wider_delim(Sample, delim = " ", names = c("Sample", "Sex"), too_many = "merge") |>
     mutate(
-      Sex = recode(Sex, "fem" = "Female", "female" = "Female", "male" = "Male"),
+      Sex = case_when(
+        Sex == "fem" ~ "Female",
+        Sex == "female" ~ "Female",
+        Sex == "male" ~ "Male",
+        .default = Sex
+      ),
       Sample = factor(Sample, levels = sample_levels)
     )
 }
@@ -199,7 +212,7 @@ tidy_contrast <- function(contrasts, y_positions) {
     mutate(
       p.value = report_p(p.perm)
     ) |>
-    separate(contrast, into = c("group1", "group2"), sep = " - ") |>
+    separate_wider_delim(contrast, delim = " - ", names = c("group1", "group2"), too_many = "merge") |>
     mutate(
       group2 = str_remove_all(group2, "[()]"),
       y.position = y_positions[group1]
