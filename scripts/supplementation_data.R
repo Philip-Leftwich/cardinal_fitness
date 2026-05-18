@@ -27,7 +27,12 @@ data_long
 # Format data for interaction models
 
 data_long2 <- data_long |>
-  separate_wider_delim(treatment, delim = " (", names = c("genotype", "dosage")) |>
+  separate_wider_delim(
+    treatment,
+    delim = " (",
+    names = c("genotype", "dosage"),
+    too_few = "align_start"
+  ) |>
   mutate(genotype = str_trim(genotype)) |>
   mutate(dosage = str_remove(dosage, "\\)")) |>
   filter(dosage %in% c("0mM", "6mM", "6mM C-")) |>
@@ -41,10 +46,10 @@ data_long2 <- data_long |>
 # and genotype/experiment must belong to expected categories;
 # validated before any modelling (produces Figure 4)
 data_long2 <- data_long2 |>
-  verify(Hours > 0) |>                                  # survival time must be positive
-  verify(event %in% c(0, 1)) |>                         # event must be binary (0/1)
-  assert(in_set("WT", "Het"), genotype) |>              # only two expected genotypes
-  assert(in_set("Sugar", "Blood"), experiment)           # only two supplementation routes
+  verify(Hours > 0) |> # survival time must be positive
+  verify(event %in% c(0, 1)) |> # event must be binary (0/1)
+  assert(in_set("WT", "Het"), genotype) |> # only two expected genotypes
+  assert(in_set("sugar supplementation", "blood supplementation"), experiment) # only two supplementation routes
 
 
 # ── Distribution comparison ────────────────────────────────────────────────────
@@ -174,5 +179,3 @@ XA_suppl <- ggplot(
   suppl_scales
 
 XA_suppl
-
-# ── Plot 2: ghost lines — c_minus comparison within each panel ────────────────

@@ -42,13 +42,20 @@ data <- read_excel(
     .fn = ~ str_replace(., "smurf_", "")
   ) |>
   pivot_longer(cols = 2:25, names_to = "condition", values_to = "values") |>
-  separate_wider_delim(condition, delim = "_", names = c("smurf", "genotype", "delivery")) |>
+  separate_wider_delim(
+    condition,
+    delim = "_",
+    names = c("smurf", "genotype", "delivery")
+  ) |>
   mutate(id = str_remove_all(id, "[0-9]")) |>
   drop_na(id)
 
 
 data_wide <- data |>
-  summarise(n = sum(values, na.rm = TRUE), .by = c(id, smurf, genotype, delivery)) |>
+  summarise(
+    n = sum(values, na.rm = TRUE),
+    .by = c(id, smurf, genotype, delivery)
+  ) |>
   pivot_wider(names_from = smurf, values_from = n) |>
   mutate(delivery = fct_relevel(delivery, "SUCROSE")) |>
   mutate(genotype = fct_relevel(genotype, "WT"))
@@ -60,9 +67,9 @@ data_wide <- data_wide |>
 # Hard checks: smurf counts must be non-negative integers and genotype labels
 # must belong to the expected set; all verified before modelling (Figure 3)
 data_wide <- data_wide |>
-  verify(positive >= 0) |>                              # smurf-positive count cannot be negative
-  verify(negative >= 0) |>                              # smurf-negative count cannot be negative
-  assert(in_set("WT", "KI", "KO"), genotype)            # genotype must be one of the three expected levels
+  verify(positive >= 0) |> # smurf-positive count cannot be negative
+  verify(negative >= 0) |> # smurf-negative count cannot be negative
+  assert(in_set("WT", "KI", "KO"), genotype) # genotype must be one of the three expected levels
 
 # Model ====
 
@@ -228,7 +235,12 @@ survival_after_smurf <- survival_after_smurf |>
     values_to = "survival"
   ) |>
   drop_na(survival) |>
-  separate_wider_delim(treatment, delim = "_", names = c("line", "delivery")) |>
+  separate_wider_delim(
+    treatment,
+    delim = "_",
+    names = c("line", "delivery"),
+    too_many = "merge"
+  ) |>
   filter(delivery == "sucrose") |>
   mutate(line = str_to_upper(line))
 

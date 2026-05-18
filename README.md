@@ -2,9 +2,13 @@
 
 **Analytical code for the *cardinal* fitness manuscript**
 
-> Authors: Philip Leftwich (p.leftwich@uea.ac.uk)
+> Authors: Mireia Larrosa-Godall, Lewis Shackleford, Philip T. Leftwich,
+> Estela Gonzalez, Joshua X. D. Ang, Matthew Edwards, Katherine Nevard,
+> James C.Y. Luk, Morgan Mckee, Michelle A. E. Anderson, Luke Alphey
 >
-> University of East Anglia
+> Correspondence: m.anderson@pirbright.ac.uk; l.alphey@pirbright.ac.uk
+
+
 
 ---
 
@@ -17,15 +21,10 @@ and adapt it with attribution.
 
 ## Associated Manuscript
 
-Leftwich, P.T. *et al.* (in prep). *Fitness effects of cardinal gene
-knockin and knockout alleles in Aedes aegypti.* (Provisional title —
+Larrosa-Godall, M. *et al.* (in prep). *Fitness effects of cardinal
+mutations in* Anopheles stephensi. (Provisional title —
 update before submission.)
 
----
-
-## Funding
-
-Please acknowledge funders here before submission.
 
 ---
 
