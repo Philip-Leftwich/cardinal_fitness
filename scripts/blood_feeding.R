@@ -37,11 +37,17 @@ surv_df <- pred_weibull(
     names = c("line", "treatment"),
     too_many = "merge"
   ) |>
-  mutate(lcl = if_else(est > 0.999, 1, lcl))
+  mutate(lcl = if_else(est > 0.999, 1, lcl)) |> 
+  filter(!(line =="1759" & treatment == "Hom")) # remove 1759 HOM due to low n
 
 
 km_df <- tidy_km(data_long, Surv(Hours, event) ~ line_treatment) |>
-  separate_wider_delim(strata, delim = "_", names = c("line", "treatment"), too_many = "merge")
+ separate_wider_delim(strata, delim = "_", names = c("line", "treatment"), too_many = "merge") |> 
+  filter(!(line =="1759" & treatment == "Hom")) # remove 1759 HOM due to low n
+
+
+
+
 
 survival_after_blood <- ggplot(
   surv_df,
@@ -70,6 +76,8 @@ survival_after_blood <- ggplot(
     axis.text.x = element_text(angle = 35, hjust = 1),
     panel.grid.minor = element_blank()
   )
+
+survival_after_blood
 
 # ── Trans-het survival ─────────────────────────────────────────────────────────
 

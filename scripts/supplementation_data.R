@@ -119,6 +119,7 @@ model_4 <- flexsurvreg(
 )
 
 
+
 # ── Predicted survival curves ─────────────────────────────────────────────────
 
 pred_data <- expand_grid(
@@ -130,8 +131,23 @@ pred_data <- expand_grid(
 surv_df <- pred_surv(
   model_4,
   newdata = pred_data,
-  t_max = max(data_long2$Hours)
+  t_max 
+  = max(data_long2$Hours)
 )
+
+source(here::here("scripts", "functions", "blood_feeding_functions.R"))
+
+km_model_4_df <- tidy_km(data_long2, Surv(Hours, event) ~ experiment +
+    dosage_mM +
+    genotype) |> separate_wider_delim(strata, delim = ",", names = c("experiment", "dosage_mM", "genotype"), too_many = "merge") |> 
+  mutate(across(.cols = c("experiment", "dosage_mM", "genotype"), .fns = str_trim)) |> 
+  group_by(experiment, dosage_mM, genotype) |>
+  group_modify(~ bind_rows(
+    tibble(time = 0, n.risk = first(.x$n.risk), n.event = 0, n.censor = 0,
+           estimate = 1, std.error = 0, conf.high = 1, conf.low = 1),
+    .x
+  ))
+
 
 # ── Shared plot scales and theme ──────────────────────────────────────────────
 
@@ -175,6 +191,13 @@ XA_suppl <- ggplot(
 ) +
   geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2, colour = NA) +
   geom_line(linewidth = 0.8) +
+  geom_step(
+    data = km_model_4_df,
+    aes(x = time, y = estimate, colour = factor(dosage_mM)),
+    linetype = "dashed",
+    linewidth = 0.5,
+    inherit.aes = FALSE
+  )+
   facet_grid(genotype ~ experiment) +
   suppl_scales
 

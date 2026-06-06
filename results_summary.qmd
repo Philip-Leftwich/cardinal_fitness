@@ -710,6 +710,38 @@ tab_model(model, pred.labels = hom_survival_labels_html)
 ```
 
 
+#### Contasts
+
+```{r}
+larvae_emm <- emmeans::emmeans(model, specs = ~ line + Genotype + Sex, type = "response") |>
+  as_tibble() 
+```
+
+```{r}
+emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
+  contrasts1 <- as_tibble(emm1$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+```
+
+```{r}
+emm2 <- emmeans::emmeans(model, pairwise ~ line | Genotype + Sex)
+  contrasts2 <- as_tibble(emm2$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+    
+
+```
+
+
 ## qPCR
 
 ```{r, include = FALSE}
