@@ -2,7 +2,7 @@ source(here::here("scripts", "packages.R"))
 source(here::here("scripts", "functions", "delta_delta_Ct_script_functions.R"))
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
-
+set.seed(220626) # For reproducibility of permutation tests
 # Input specifications for each reference gene
 analyses <- list(
   Cardinal_Rps7 = list(

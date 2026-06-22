@@ -1,0 +1,762 @@
+---
+title: "cardinal fitness — results summaries"
+execute:
+  echo: false
+  warning: false
+  message: false
+format:
+  html:
+    embed-resources: true
+---
+
+```{r, include = FALSE}
+library(gt)
+library(glue)
+source("scripts/fertility_data.R")
+```
+
+
+## Statistical Methods
+
+All analyses were performed in R (v4.5.2). Fecundity (egg counts) was modelled using a zero-inflated negative binomial mixed model fitted with glmmTMB, with cross direction and genetic line as fixed effects and replicate and plate well as nested random effects. Hatching rate was modelled using a binomial generalised linear mixed model (GLMM), also fitted with glmmTMB. Estimated marginal means and pairwise contrasts were obtained using emmeans. Post-blood-feeding survival, trans-heterozygote survival, and XA supplementation survival data were modelled using Weibull parametric survival models fitted with flexsurv. Midgut integrity (smurf assay) and adult eclosion data were modelled using binomial generalised linear models (GLMs) fitted with base R glm(). Gene expression data were analysed using the delta-delta-Ct method; ΔCt levels were modelled with a permutation-based linear model using emmeans for contrasts. Model tables were produced using sjPlot. Survival curves were visualised using Kaplan–Meier estimates alongside Weibull model predictions. All figures were produced using ggplot2 and patchwork.
+
+
+
+
+## Fecundity
+
+
+```{r}
+
+line_labels_html <- c(
+  "(Intercept)"                    = "Intercept (QA383P, SDA&times;SDA)",
+  "line2360B5"                     = "<em>cd</em><sup>g225</sup>",
+  "line1759"                       = "<em>cd</em><sup>g384</sup>",
+  "crossFemale \nHET"              = "Female Het",
+  "crossMale \nHET"                = "Male Het",
+  "crossFemale \nHOM"              = "Female Hom",
+  "crossMale \nHOM"                = "Male Hom",
+  "line2360B5:crossFemale \nHET"   = "<em>cd</em><sup>g225</sup> &times; Female Het",
+  "line1759:crossFemale \nHET"     = "<em>cd</em><sup>g384</sup> &times; Female Het",
+  "line2360B5:crossMale \nHET"     = "<em>cd</em><sup>g225</sup> &times; Male Het",
+  "line1759:crossMale \nHET"       = "<em>cd</em><sup>g384</sup> &times; Male Het",
+  "line1759:crossFemale \nHOM"     = "<em>cd</em><sup>g384</sup> &times; Female Hom",
+  "line1759:crossMale \nHOM"       = "<em>cd</em><sup>g384</sup> &times; Male Hom"
+)
+
+tab_model(egg_model, pred.labels = line_labels_html)
+```
+
+```{r}
+cond_emm <- emmeans(egg_model, ~ line * cross, component = "cond", type = "response") |>
+  as_tibble() |>
+  rename(count = response)
+
+# ZI component is intercept-only — extract single p(zero) estimate
+zi_coef <- fixef(egg_model)$zi[["(Intercept)"]]
+p_zero  <- plogis(zi_coef)  # convert log-odds to probability
+
+cond_emm |>
+  mutate(expected_count = count * (1 - p_zero),
+      line = recode(line,
+      "QA383P" = "<em>cd</em><sup>384R</sup>",
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>"
+    )) |>
+  select(line, cross, count, asymp.LCL, asymp.UCL, expected_count) |>
+
+  mutate(across(where(is.numeric), \(x) round(x, 1))) |>
+  gt() |>
+   fmt_markdown(columns = line) |> 
+  cols_label(
+    line           = "Line",
+    cross          = "Cross",
+    count          = "Conditional mean",
+    asymp.LCL       = "Lower 95% CI",
+    asymp.UCL       = "Upper 95% CI",
+    expected_count = "Expected count (incl. zeros)"
+  ) |>
+  tab_spanner(
+    label   = "Non-zero wells",
+    columns = c(count, asymp.LCL, asymp.UCL)
+  ) |>
+  tab_footnote(
+    footnote = glue::glue("Structural zero probability = {round(p_zero, 3)}; expected count = conditional mean \u00d7 (1 \u2212 p_zero)"),
+    locations = cells_column_labels(columns = expected_count)
+  ) |>
+  fmt_number(decimals = 1) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+
+```{r}
+line_html <- c(
+  "1759"    = "<em>cd</em><sup>g384</sup>",
+  "2360B5"  = "<em>cd</em><sup>g225</sup>",
+  "2072"    = "<em>cd</em><sup>g384del</sup>",
+  "2301"    = "<em>cd</em><sup>g338-384</sup>",
+  "D251"    = "<em>cd</em><sup>225R</sup>",
+  "QA383P"  = "<em>cd</em><sup>384R</sup>"
+)
+
+cons <- get_emm_contrasts(egg_model)
+
+cons$line_by_cross |>
+  mutate(contrast = str_replace_all(contrast, line_html)) |>
+  select(contrast, cross, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+  gt() |>
+  fmt_markdown(columns = contrast) |>
+  cols_label(
+    contrast  = "Contrast",
+    cross     = "Cross",
+    ratio     = "IRR",
+    ratio.LCL = "Lower 95% CI",
+    ratio.UCL = "Upper 95% CI",
+    z.ratio   = "z",
+    p.value   = "p"
+  ) |>
+  fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 2) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  tab_spanner(label = "Line comparisons within cross", columns = everything()) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+cons$cross_by_line |>
+  select(contrast, line, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+  mutate(line = recode(line,
+      "QA383P" = "<em>cd</em><sup>384R</sup>",
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>"
+    )) |> 
+  gt() |>
+  fmt_markdown() |> 
+  cols_label(
+    contrast  = "Contrast",
+    line      = "Line",
+    ratio     = "IRR",
+    ratio.LCL = "Lower 95% CI",
+    ratio.UCL = "Upper 95% CI",
+    z.ratio   = "z",
+    p.value   = "p"
+  ) |>
+  fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 2) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  tab_spanner(label = "Cross comparisons within line", columns = everything()) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+
+
+```{r}
+p_fecundity
+```
+
+## Fertility
+
+```{r}
+larvae_labels_html <- c(
+  "(Intercept)"                  = "Intercept (QA383P, SDA&times;SDA)",
+  "line2360B5"                   = "<em>cd</em><sup>g225</sup>",
+  "line1759"                     = "<em>cd</em><sup>g384</sup>",
+  "crossFemale \nHET"            = "Female Het",
+  "crossMale \nHET"              = "Male Het",
+  "crossFemale \nHOM"            = "Female Hom",
+  "crossMale \nHOM"              = "Male Hom",
+  "line1759:crossFemale \nHET"   = "<em>cd</em><sup>g384</sup> &times; Female Het",
+  "line1759:crossMale \nHET"     = "<em>cd</em><sup>g384</sup> &times; Male Het",
+  "line1759:crossFemale \nHOM"   = "<em>cd</em><sup>g384</sup> &times; Female Hom",
+  "line1759:crossMale \nHOM"     = "<em>cd</em><sup>g384</sup> &times; Male Hom"
+)
+
+
+tab_model(larvae_model2, pred.labels = larvae_labels_html)
+```
+
+
+
+
+
+
+```{r}
+larvae_emm <- emmeans::emmeans(larvae_model2, specs = ~ line + cross, type = "response") |>
+  as_tibble() |>
+  rename(prob = response)
+
+larvae_emm |>
+  select(line, cross, prob, asymp.LCL, asymp.UCL) |>
+  mutate(line = recode(line,
+      "QA383P" = "<em>cd</em><sup>384R</sup>",
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>"
+    )) |> 
+  gt() |>
+  fmt_markdown() |> 
+  cols_label(
+    line      = "Line",
+    cross     = "Cross",
+    prob      = "Hatching probability",
+    asymp.LCL = "Lower 95% CI",
+    asymp.UCL = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(prob, asymp.LCL, asymp.UCL), decimals = 3) |>
+  tab_spanner(
+    label   = "Estimated marginal means",
+    columns = c(prob, asymp.LCL, asymp.UCL)
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+larvae_cons <- get_emm_contrasts(larvae_model2)
+
+
+larvae_cons$line_by_cross |>
+  mutate(contrast = str_replace_all(contrast, line_html)) |> 
+  select(contrast, cross, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+  gt() |>
+  fmt_markdown(columns = contrast) |>
+  cols_label(
+    contrast  = "Contrast",
+    cross     = "Cross",
+    ratio     = "OR",
+    ratio.LCL = "Lower 95% CI",
+    ratio.UCL = "Upper 95% CI",
+    z.ratio   = "z",
+    p.value   = "p"
+  ) |>
+  fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 2) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  tab_spanner(label = "Line comparisons within cross", columns = everything()) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+larvae_cons$cross_by_line |>
+  select(contrast, line, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+    mutate(line = recode(line,
+      "QA383P" = "<em>cd</em><sup>384R</sup>",
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>"
+    )) |> 
+  gt() |>
+  fmt_markdown() |> 
+  cols_label(
+    contrast  = "Contrast",
+    line      = "Line",
+    ratio     = "OR",
+    ratio.LCL = "Lower 95% CI",
+    ratio.UCL = "Upper 95% CI",
+    z.ratio   = "z",
+    p.value   = "p"
+  ) |>
+  fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 2) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  tab_spanner(label = "Cross comparisons within line", columns = everything()) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+p_fertility
+```
+
+
+```{r}
+
+p_fecundity + p_fertility + plot_layout(guides = "collect") & theme(legend.position = "bottom") & plot_annotation(tag_levels = 'A')
+
+```
+
+## Survival after Blood Feeding
+
+```{r, include = FALSE}
+source("scripts/blood_feeding.R")
+```
+
+
+
+```{r}
+blood_feeding_labels_html <- c(
+  "(Intercept)" = "Intercept (<em>cd</em><sup>225R</sup> Hom)",
+  "line_treatment1759_Het" = "<em>cd</em><sup>g384</sup> Het",
+  "line_treatment1759_Hom" = "<em>cd</em><sup>g384</sup> Hom",
+  "line_treatment1759_WT" = "<em>cd</em><sup>g384</sup> WT",
+  "line_treatment2072_Het" = "<em>cd</em><sup>g384del</sup> Het",
+  "line_treatment2072_WT" = "<em>cd</em><sup>g384del</sup> WT",
+  "line_treatment2301_Het" = "<em>cd</em><sup>g338-384</sup> Het",
+  "line_treatment2301_WT" = "<em>cd</em><sup>g338-384</sup> WT",
+  "line_treatment2360B5_Het" = "<em>cd</em><sup>g225</sup> Het",
+  "line_treatment2360B5_WT" = "<em>cd</em><sup>g225</sup> WT",
+  "line_treatmentD251_WT" = "<em>cd</em><sup>225R</sup> WT"
+)
+
+tab_model(
+  weibull_bf$model,
+  pred.labels = blood_feeding_labels_html,
+  show.re.var = FALSE
+)
+```
+
+```{r}
+survival_after_blood
+```
+
+
+# Median survival (t50) by group
+
+```{r}
+summary(weibull_bf$model, type = "quantile", quantiles = 0.5, ci = TRUE) |>
+  map_dfr(as_tibble, .id = "group") |>
+  mutate(
+    line     = str_extract(group, "(?<=line_treatment=).+"),
+    genotype = str_extract(line, "WT|Het|Hom"),
+    line     = str_remove(line, "_WT|_Het|_Hom"),
+    line     = recode(line,
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>",
+      "2072"   = "<em>cd</em><sup>g384del</sup>",
+      "2301"   = "<em>cd</em><sup>g338-384</sup>",
+      "D251"   = "<em>cd</em><sup>225R</sup>"
+    )
+  ) |>
+  select(line, genotype, est, lcl, ucl) |>
+  gt() |>
+  fmt_markdown(columns = line) |>
+  cols_label(
+    line     = "Line",
+    genotype = "Genotype",
+    est      = "Median survival (h)",
+    lcl      = "Lower 95% CI",
+    ucl      = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(est, lcl, ucl), decimals = 1) |>
+  tab_spanner(
+    label   = "Median survival time",
+    columns = c(est, lcl, ucl)
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+
+```
+
+# Survival probability at t = 300 h
+
+```{r}
+summary(weibull_bf$model, type = "survival", t = 300, ci = TRUE) |>
+  map_dfr(as_tibble, .id = "group") |>
+  mutate(
+    line     = str_extract(group, "(?<=line_treatment=).+"),
+    genotype = str_extract(line, "WT|Het|Hom"),
+    line     = str_remove(line, "_WT|_Het|_Hom"),
+    line     = recode(line,
+      "1759"   = "<em>cd</em><sup>g384</sup>",
+      "2360B5" = "<em>cd</em><sup>g225</sup>",
+      "2072"   = "<em>cd</em><sup>g384del</sup>",
+      "2301"   = "<em>cd</em><sup>g338-384</sup>",
+      "D251"   = "<em>cd</em><sup>225R</sup>"
+    )
+  ) |>
+  select(line, genotype, est, lcl, ucl) |>
+  gt() |>
+  fmt_markdown(columns = line) |>
+  cols_label(
+    line     = "Line",
+    genotype = "Genotype",
+    est      = "Survival",
+    lcl      = "Lower 95% CI",
+    ucl      = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(est, lcl, ucl), decimals = 3) |>
+  tab_spanner(
+    label   = "Survival probability at 300 h",
+    columns = c(est, lcl, ucl)
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+## TransHet survival
+
+
+
+```{r}
+transhet_labels_html <- c(
+  "(Intercept)" = "Intercept (2360B5 Het)",
+  "line_treatment2360WT" = "2360B5 WT",
+  "line_treatmentD251:2360Het" = "Trans-het (D251:2360 Het)",
+  "line_treatmentD251:2360WT" = "Het<sup>KO</sup> (D251:2360 WT)"
+)
+
+tab_model(
+  weibull_th$model,
+  pred.labels = transhet_labels_html,
+  show.re.var = FALSE,
+  digits = 3
+)
+```
+
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(weibull_th$model, type = "survival", t = 100, ci = TRUE) |>
+  map_dfr(as_tibble, .id = "group") |>
+  mutate(
+    line     = str_extract(group, "(?<=line_treatment=).+"),
+    genotype = str_extract(line, "Het|WT|Hom"),
+    line     = str_remove(line, "Het|WT|Hom") |> str_trim(),
+    line = recode(line,
+      "2360" = "<em>cd</em><sup>g225</sup>",
+      "D251" = "<em>cd</em><sup>225R</sup>",
+      "D251:2360" = "<em>cd</em><sup>g225</sup>:<em>cd</em><sup>225R</sup>"
+    ))  |>
+  select(line, genotype, est, lcl, ucl) |>
+  gt() |>
+  fmt_markdown() |> 
+  cols_label(
+    line     = "Line",
+    genotype = "Genotype",
+    est      = "Survival",
+    lcl      = "Lower 95% CI",
+    ucl      = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(est, lcl, ucl), decimals = 3) |>
+  tab_spanner(
+    label   = "Survival probability at 100 h",
+    columns = c(est, lcl, ucl)
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+
+```
+
+
+
+
+```{r}
+transhet_survival
+```
+
+## Smurf assay
+
+```{r, include = FALSE}
+source("scripts/smurf.R")
+```
+
+
+```{r}
+
+line_labels_html <- c(
+  "(Intercept)" = "Intercept",
+  "line2360B5" = "<em>cd</em><sup>g225</sup>",
+  "line1759" = "<em>cd</em><sup>g384</sup>",
+  "crossHETxSDA" = "HET&times;SDA",
+  "crossSDAxHET" = "SDA&times;HET",
+  "crossHOMxSDA" = "HOM&times;SDA",
+  "crossSDAxHOM" = "SDA&times;HOM",
+  "line1759:crossHETxSDA" = "<em>cd</em><sup>g384</sup> × HET&times;SDA",
+  "line1759:crossSDAxHET" = "<em>cd</em><sup>g384</sup> × SDA&times;HET",
+  "line1759:crossHOMxSDA" = "<em>cd</em><sup>g384</sup> × HOM&times;SDA",
+  "line1759:crossSDAxHOM" = "<em>cd</em><sup>g384</sup> × SDA&times;HOM",
+  "line2360B5:crossHETxSDA" = "<em>cd</em><sup>g225</sup> × HET&times;SDA",
+  "line2360B5:crossSDAxHET" = "<em>cd</em><sup>g225</sup> × SDA&times;HET"
+)
+
+smurf_labels_html <- c(
+  "(Intercept)" = "Intercept (WT)",
+  "genotypeKI" = "KI",
+  "genotypeKO" = "KO"
+)
+
+tab_model(
+  smurf_model,
+  pred.labels = smurf_labels_html,
+  show.re.var = FALSE
+)
+```
+
+```{r}
+emmeans::emmeans(smurf_model, specs = ~ genotype, type = "response") |>
+  as_tibble() |>
+  gt() |>
+  cols_label(
+    genotype  = "Genotype",
+    prob      = "Probability",
+    SE        = "SE",
+    df        = "df",
+    asymp.LCL = "Lower 95% CI",
+    asymp.UCL = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(prob, SE, asymp.LCL, asymp.UCL), decimals = 3) |>
+  fmt_number(columns = df, decimals = 0) |>
+  tab_spanner(
+    label   = "Smurf probability by genotype",
+    columns = everything()
+  ) |>
+  tab_footnote(
+    footnote  = "Probabilities back-transformed from the logit scale. Confidence level: 95%.",
+    locations = cells_column_labels(columns = prob)
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+```{r}
+p_smurf
+```
+
+### Alternative figure as bar chart
+
+```{r}
+tab_model(
+  model_smurf_by,
+  #   string.pred = line_labels_html,
+  show.re.var = FALSE
+)
+```
+
+
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(model_smurf_by,
+        type    = "survival",
+        t       = 72,                        # fixed time point in your time units
+        ci      = TRUE)
+
+```
+
+```{r}
+
+p_smurf2
+
+```
+
+
+### Survival after Smurf
+
+```{r}
+tab_model(
+  model_smurf_surv,
+  #   string.pred = line_labels_html,
+  show.re.var = FALSE
+)
+```
+
+```{r}
+# Survival probability at a fixed time point, per group
+summary(model_smurf_surv,
+        type    = "survival",
+        t       = 72,                        # fixed time point in your time units
+        ci      = TRUE)
+
+```
+
+```{r}
+
+survival_after_smurf_plot
+
+```
+
+### Survival separated by smurf
+
+
+```{r}
+tab_model(
+  model_smurf_by,
+  #   string.pred = line_labels_html,
+  show.re.var = FALSE
+)
+
+
+```
+
+```{r}
+
+survival_by_smurf_plot
+
+```
+
+## XA Supplementation
+
+```{r, include = FALSE}
+source("scripts/supplementation_data.R")
+```
+
+
+```{r}
+xa_labels_html <- c(
+  "(Intercept)" = "Intercept (blood, 0 mM, Het)",
+  "experimentsugar supplementation" = "Sugar supplementation",
+  "dosage_mM6mM C-" = "6 mM NaOH control",
+  "dosage_mM6mM" = "6 mM XA",
+  "genotypeWT" = "WT"
+)
+
+tab_model(
+  model_4,
+  pred.labels = xa_labels_html,
+  show.re.var = FALSE
+)
+```
+
+```{r}
+XA_suppl
+```
+
+```{r}
+summary(model_4, type = "survival", t = 72, ci = TRUE) |>
+  map_dfr(as_tibble, .id = "group") |>
+  mutate(
+    experiment = str_extract(group, "(?<=experiment=)[^,]+"),
+    dosage_mM  = str_extract(group, "(?<=dosage_mM=)[^,]+"),
+    genotype   = str_extract(group, "(?<=genotype=).+")
+  ) |>
+  select(experiment, dosage_mM, genotype, est, lcl, ucl) |>
+  arrange(experiment, genotype, dosage_mM) |>
+  gt() |>
+  cols_label(
+    experiment = "Experiment",
+    dosage_mM  = "Dose",
+    genotype   = "Genotype",
+    est        = "Survival",
+    lcl        = "Lower 95% CI",
+    ucl        = "Upper 95% CI"
+  ) |>
+  fmt_number(columns = c(est, lcl, ucl), decimals = 3) |>
+  tab_spanner(
+    label   = "Survival probability at 72 h",
+    columns = c(est, lcl, ucl)
+  ) |>
+  tab_row_group(
+    label = "Sugar supplementation",
+    rows  = experiment == "sugar supplementation"
+  ) |>
+  tab_row_group(
+    label = "Blood supplementation",
+    rows  = experiment == "blood supplementation"
+  ) |>
+  tab_style(
+    style     = cell_text(weight = "bold"),
+    locations = cells_column_spanners()
+  ) |>
+  opt_stylize(style = 1)
+```
+
+## Homozygous Survival
+
+```{r, include = FALSE}
+source("scripts/hom_survival.R")
+```
+
+Adult eclosion was assessed from balanced crosses. The proportion of adults eclosing out of an expected 200 was modelled with a binomial GLM including line (1759 vs QA383P), genotype (HET, WT), sex, and all two- and three-way interactions (n = 16 observations; HOM observations excluded due to missingness). The reference cell was QA383P, HET, female.
+
+The cd^g384^ line (1759) did not differ significantly from QA383P in HET female eclosion rate (OR = 1.22, p = 0.157). WT females did not differ significantly from HET females in either line (OR = 0.95, p = 0.722). Neither sex nor any two- or three-way interaction reached statistical significance (all p > 0.16). These results indicate that, in the absence of homozygotes, eclosion rates are broadly similar between lines, genotypes, and sexes, and that no strong line-by-genotype or line-by-sex effects on HET/WT viability are detectable in this dataset.
+
+```{r}
+hom_survival_labels_html <- c(
+  "(Intercept)" = "Intercept (<em>cd</em><sup>384R</sup> HET female)",
+  "line1759" = "Line (<em>cd</em><sup>g384</sup> vs <em>cd</em><sup>384R</sup>)",
+  "GenotypeWT" = "WT",
+  "GenotypeHOM" = "HOM",
+  "Sexmale" = "Male",
+  "line1759:GenotypeWT" = "<em>cd</em><sup>g384</sup> &times; WT",
+  "line1759:GenotypeHOM" = "<em>cd</em><sup>g384</sup> &times; HOM",
+  "line1759:Sexmale" = "<em>cd</em><sup>g384</sup> &times; Male",
+  
+  "GenotypeWT:Sexmale" = "WT &times; Male",
+  "GenotypeHOM:Sexmale" = "HOM &times; Male",
+  
+  "line1759:GenotypeWT:Sexmale" = "<em>cd</em><sup>g384</sup> &times; WT &times; Male",
+  "line1759:GenotypeHOM:Sexmale" = "<em>cd</em><sup>g384</sup> &times; HOM &times; Male"
+)
+
+tab_model(model, pred.labels = hom_survival_labels_html)
+```
+
+
+#### Contasts
+
+```{r}
+larvae_emm <- emmeans::emmeans(model, specs = ~ line + Genotype + Sex, type = "response") |>
+  as_tibble() 
+```
+
+```{r}
+emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
+  contrasts1 <- as_tibble(emm1$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+```
+
+```{r}
+emm2 <- emmeans::emmeans(model, pairwise ~ line | Genotype + Sex)
+  contrasts2 <- as_tibble(emm2$contrasts) |>
+    drop_na() |>
+    mutate(
+      ratio = exp(estimate),
+      ratio.LCL = exp(estimate - 1.96 * SE),
+      ratio.UCL = exp(estimate + 1.96 * SE)
+    )
+    
+
+```
+
+
+## qPCR
+
+```{r, include = FALSE}
+results <- readRDS("data/ddCt_results.rds")
+```
+
+```{r}
+results$Cardinal_Rps7$plot
+
+
+```
+
+
+```{r}
+
+results$Cardinal_GADPH$plot
+
+```

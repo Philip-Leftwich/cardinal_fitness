@@ -4,9 +4,9 @@
 
 > Authors: Mireia Larrosa-Godall, Lewis Shackleford, Philip T. Leftwich,
 > Estela Gonzalez, Joshua X. D. Ang, Matthew Edwards, Katherine Nevard,
-> James C.Y. Luk, Morgan Mckee, Michelle A. E. Anderson, Luke Alphey
+> James C.Y. Luk, Morgan Mckee, Rob Noad, Michelle A. E. Anderson, Luke Alphey
 >
-> Correspondence: m.anderson@pirbright.ac.uk; l.alphey@pirbright.ac.uk
+> Correspondence: michelle.anderson@york.ac.uk, luke.alphey@york.ac.uk
 
 
 

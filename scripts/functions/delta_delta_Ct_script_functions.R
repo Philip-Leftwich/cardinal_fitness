@@ -110,7 +110,7 @@ plot_ddct <- function(data, contrast, plot_title = NULL) {
     scale_y_continuous(
       trans = "log2",
       name = expression(
-        log[2] ~ "Relative Expression (" *
+        "Relative Expression (" *
           2^{
             -Delta * Delta * "Ct"
           } *
