@@ -128,7 +128,7 @@ p_smurf <- ggplot(
   geom_point(
     data = raw_smurf,
     aes(x = genotype, y = prop, colour = genotype),
-    position = position_jitter(width = .15),
+    position = position_jitter(width = .15, height = 0),
     alpha = 0.3,
     size = 1.5,
     shape = 16
@@ -179,7 +179,7 @@ p_smurf2 <- ggplot(
   geom_point(
     data = raw_smurf,
     aes(x = genotype, y = prop, colour = genotype),
-    position = position_jitter(width = .15),
+    position = position_jitter(width = .15, height = 0),
     alpha = 0.3,
     size = 1.5,
     shape = 16
@@ -244,14 +244,48 @@ survival_after_smurf <- survival_after_smurf |>
   filter(delivery == "sucrose") |>
   mutate(line = str_to_upper(line))
 
-# Weibull model + predicted survival curves
-weibull_after <- fit_weibull_surv(
-  data = survival_after_smurf,
-  formula = Surv(hours, survival) ~ line,
-  t_max = 120
+# Observed deaths per genotype (reported in place of separated model terms)
+smurf_surv_observed <- observed_deaths(
+  survival_after_smurf,
+  line,
+  event = "survival"
 )
-model_smurf_surv <- weibull_after$model
-surv_df_smurf <- weibull_after$surv_df
+smurf_surv_observed
+
+# No WT or KO females died, so their time ratios are not estimable (complete
+# separation) and would corrupt the model's standard errors. The Weibull
+# model is therefore fitted to the genotype(s) with deaths only (KI); WT and
+# KO are shown by their Kaplan-Meier curves and reported as observed counts.
+data_smurf_model <- drop_zero_event_groups(
+  survival_after_smurf,
+  line,
+  event = "survival"
+)
+attr(data_smurf_model, "zero_event_groups")
+
+smurf_surv_formula <- if (n_distinct(data_smurf_model$line) > 1) {
+  Surv(hours, survival) ~ line
+} else {
+  Surv(hours, survival) ~ 1
+}
+
+model_smurf_surv <- flexsurvreg(
+  smurf_surv_formula,
+  data = data_smurf_model,
+  dist = "weibull"
+)
+
+surv_df_smurf <- summary(
+  model_smurf_surv,
+  newdata = distinct(data_smurf_model, line),
+  type = "survival",
+  t = seq(0, 120, length.out = 108),
+  tidy = TRUE
+) |>
+  as_tibble()
+if (!"line" %in% names(surv_df_smurf)) {
+  surv_df_smurf$line <- unique(data_smurf_model$line)
+}
 
 surv_df_smurf <- surv_df_smurf |>
   mutate(lcl = if_else(est > 0.999, 1, lcl)) |>
@@ -269,19 +303,12 @@ survival_after_smurf_plot <- plot_surv(
   km_df = km_df_smurf,
   colour_var = "line",
   colour_scale = scale_colour_manual(
-    values = c(
-      "darkgray",
-      "#8BABD3",
-      "#FFA040"
-    ),
+    values = c("WT" = "darkgray", "KI" = "#8BABD3", "KO" = "#FFA040"),
+    breaks = genotype_order,
     name = "Genotype"
   ),
   fill_scale = scale_fill_manual(
-    values = c(
-      "darkgray",
-      "#8BABD3",
-      "#FFA040"
-    ),
+    values = c("WT" = "darkgray", "KI" = "#8BABD3", "KO" = "#FFA040"),
     name = "Genotype"
   ),
   extra_layers = facet_wrap(

@@ -7,6 +7,8 @@ execute:
 format:
   html:
     embed-resources: true
+    toc: true
+    toc-depth: 2
 ---
 
 ```{r, include = FALSE}
@@ -18,13 +20,35 @@ source("scripts/fertility_data.R")
 
 ## Statistical Methods
 
-All analyses were performed in R (v4.5.2). Fecundity (egg counts) was modelled using a zero-inflated negative binomial mixed model fitted with glmmTMB, with cross direction and genetic line as fixed effects and replicate and plate well as nested random effects. Hatching rate was modelled using a binomial generalised linear mixed model (GLMM), also fitted with glmmTMB. Estimated marginal means and pairwise contrasts were obtained using emmeans. Post-blood-feeding survival, trans-heterozygote survival, and XA supplementation survival data were modelled using Weibull parametric survival models fitted with flexsurv. Midgut integrity (smurf assay) and adult eclosion data were modelled using binomial generalised linear models (GLMs) fitted with base R glm(). Gene expression data were analysed using the delta-delta-Ct method; ΔCt levels were modelled with a permutation-based linear model using emmeans for contrasts. Model tables were produced using sjPlot. Survival curves were visualised using Kaplan–Meier estimates alongside Weibull model predictions. All figures were produced using ggplot2 and patchwork.
+All analyses were performed in R (v4.5.2). Fecundity (egg counts) was modelled using a zero-inflated negative binomial (nbinom1) mixed model fitted with glmmTMB, with genetic line, cross and their interaction as fixed effects, an intercept-only zero-inflation component, and replicate and plate well as nested random effects. Hatching rate was modelled using a binomial generalised linear mixed model (GLMM), also fitted with glmmTMB. Estimated marginal means and contrasts were obtained using emmeans; each genotype is compared with the wildtype (WT) group of the same line (treatment-versus-control, Dunnett-adjusted within line). Post-blood-feeding survival, trans-heterozygote survival, and XA supplementation survival data were modelled using Weibull parametric survival models fitted with flexsurv. Groups in which no female died have no estimable time ratio (complete separation) and, if included, corrupt flexsurv's standard errors for every other group; these groups were fitted out of the Weibull models, shown by Kaplan–Meier curves only, and compared using log-rank tests. Time ratios against each line's WT siblings were computed from the model coefficients and covariance matrix (Holm-adjusted within line). XA supplementation was analysed separately for each supplementation route (each treatment within a route was a single cage), using heterozygotes only, with the pooled model and an arm × treatment test as supporting evidence. Midgut integrity (smurf assay) and adult eclosion data were modelled using binomial generalised linear models (GLMs) fitted with base R glm(). Gene expression data were analysed using the delta-delta-Ct method; ΔCt levels were modelled with a permutation-based linear model using emmeans for contrasts. Model tables were produced using sjPlot. Survival curves were visualised using Kaplan–Meier estimates alongside Weibull model predictions. All figures were produced using ggplot2 and patchwork.
 
+## Manuscript items in this report
 
+Each table and figure below is labelled with the manuscript item it supplies. The labels mean:
 
+- **(new)**: added in response to the reviewers.
+- **Superseded**: kept for reference only; do not use in the supplement.
+- **Text values**: the source of numbers quoted in the Results, not itself a supplementary table.
 
-## Fecundity
+| Manuscript item | Content | Section of this report |
+|---|---|---|
+| Table 1 (new, main text) | Direction and significance of each trait relative to WT | Table 1 and STable S_fitness |
+| STable 1 | Larva-to-adult survival | Larva-to-adult survival |
+| STable 2 | Engorgement and survival numbers | Not generated here (summary sheets in `data/FertilityData.xlsx`) |
+| STable 3 | Fecundity | Fecundity |
+| STable 4 | Fertility (hatching) | Fertility |
+| STable 5 | Survival after blood feeding | Survival after blood feeding |
+| STable 6 | Smurf assay | Smurf assay |
+| STable 7 | XA supplementation | XA supplementation |
+| STable 8 | Trans-heterozygote survival | Trans-heterozygote survival |
+| STable S_fitness (new) | Observed values, ratios, 95% CIs and p-values behind Table 1 | Table 1 and STable S_fitness |
+| Statistics for Fig. 6 / SFig. 5 (suggested new STable) | qPCR contrasts | qPCR |
 
+Figures 1–6, SFig. 3 and SFig. 5 are labelled where they appear; exported versions are in `outputs/figures/`.
+
+## Fecundity (STable 3; Fig. 1A)
+
+**STable 3a.** Fecundity: model coefficients (zero-inflated negative binomial GLMM).
 
 ```{r}
 
@@ -46,6 +70,8 @@ line_labels_html <- c(
 
 tab_model(egg_model, pred.labels = line_labels_html)
 ```
+
+**STable 3b.** Estimated eggs per female: conditional (non-zero) mean, and expected count including zeros.
 
 ```{r}
 cond_emm <- emmeans(egg_model, ~ line * cross, component = "cond", type = "response") |>
@@ -93,6 +119,8 @@ cond_emm |>
 ```
 
 
+**STable 3c.** Line comparisons within each cross. This is the source of the female-heterozygote contrast in comments 9 and 10 (z = 0.57, p = 0.57).
+
 ```{r}
 line_html <- c(
   "1759"    = "<em>cd</em><sup>g384</sup>",
@@ -129,6 +157,8 @@ cons$line_by_cross |>
   opt_stylize(style = 1)
 ```
 
+**STable 3d.** Cross comparisons within each line.
+
 ```{r}
 cons$cross_by_line |>
   select(contrast, line, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
@@ -160,11 +190,80 @@ cons$cross_by_line |>
 
 
 
+**STable 3e (new; comment 5).** Each cross versus the WT group of the same line (Dunnett).
+
+```{r}
+# Each cross versus its own line's WT group
+vs_wt_table <- function(x, ratio_label, title) {
+  x |>
+    mutate(
+      contrast = str_replace_all(contrast, "\n", ""),
+      line = recode(as.character(line), !!!line_html)
+    ) |>
+    select(line, contrast, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+    gt() |>
+    fmt_markdown(columns = line) |>
+    cols_label(
+      line = "Line",
+      contrast = "Contrast",
+      ratio = ratio_label,
+      ratio.LCL = "Lower 95% CI",
+      ratio.UCL = "Upper 95% CI",
+      z.ratio = "z",
+      p.value = "p (Dunnett)"
+    ) |>
+    fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 2) |>
+    fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+    tab_spanner(label = title, columns = everything()) |>
+    opt_stylize(style = 1)
+}
+
+vs_wt_table(egg_vs_wt, "IRR", "Each cross versus WT of the same line")
+```
+
+**STable 3f (new; comment 6).** Observed egg counts and proportion of females laying any eggs.
+
+```{r}
+# Observed egg counts (all females with a count, including zeros)
+fertility_data |>
+  filter(!is.na(eggs)) |>
+  summarise(
+    n = n(),
+    mean_eggs = mean(eggs),
+    median_eggs = median(eggs),
+    prop_laying = mean(eggs > 0),
+    .by = c(line, cross)
+  ) |>
+  arrange(line, cross) |>
+  mutate(
+    cross = str_replace_all(cross, "\n", ""),
+    line = recode(as.character(line), !!!line_html)
+  ) |>
+  gt() |>
+  fmt_markdown(columns = line) |>
+  fmt_number(columns = c(mean_eggs, median_eggs), decimals = 1) |>
+  fmt_percent(columns = prop_laying, decimals = 0) |>
+  cols_label(
+    line = "Line",
+    cross = "Cross",
+    n = "Females",
+    mean_eggs = "Mean eggs",
+    median_eggs = "Median eggs",
+    prop_laying = "Laid any eggs"
+  ) |>
+  tab_footnote("The zero-inflation component is intercept-only, so the model assumes the same proportion of non-laying females in every group; observed proportions range widely.") |>
+  opt_stylize(style = 1)
+```
+
+**Figure 1A** (panel; the full Figure 1 is at the end of the Fertility section).
+
 ```{r}
 p_fecundity
 ```
 
-## Fertility
+## Fertility (STable 4; Fig. 1B)
+
+**STable 4a.** Hatching: model coefficients (binomial GLMM).
 
 ```{r}
 larvae_labels_html <- c(
@@ -189,6 +288,8 @@ tab_model(larvae_model2, pred.labels = larvae_labels_html)
 
 
 
+
+**STable 4b.** Estimated hatching probabilities.
 
 ```{r}
 larvae_emm <- emmeans::emmeans(larvae_model2, specs = ~ line + cross, type = "response") |>
@@ -223,6 +324,8 @@ larvae_emm |>
   opt_stylize(style = 1)
 ```
 
+**STable 4c.** Line comparisons within each cross.
+
 ```{r}
 larvae_cons <- get_emm_contrasts(larvae_model2)
 
@@ -250,6 +353,8 @@ larvae_cons$line_by_cross |>
   ) |>
   opt_stylize(style = 1)
 ```
+
+**STable 4d.** Cross comparisons within each line.
 
 ```{r}
 larvae_cons$cross_by_line |>
@@ -280,24 +385,33 @@ larvae_cons$cross_by_line |>
   opt_stylize(style = 1)
 ```
 
+**STable 4e (new; comment 5).** Each cross versus the WT group of the same line (Dunnett).
+
+```{r}
+vs_wt_table(larvae_vs_wt, "OR", "Each cross versus WT of the same line")
+```
+
+**Figure 1B** (panel).
+
 ```{r}
 p_fertility
 ```
 
+**Figure 1** (revised; comment 7).
 
-```{r}
-
-p_fecundity + p_fertility + plot_layout(guides = "collect") & theme(legend.position = "bottom") & plot_annotation(tag_levels = 'A')
-
+```{r, fig.width = 10, fig.height = 8}
+# Figure 1. WT = non-transgenic siblings x SDA-500 (cd[g384]); SDA-500 x
+# SDA-500 (cd[384R]); siblings pooled with SDA-500 x SDA-500 (cd[g225])
+fig1
 ```
 
-## Survival after Blood Feeding
+## Survival after blood feeding (STable 5; Fig. 2)
 
 ```{r, include = FALSE}
 source("scripts/blood_feeding.R")
 ```
 
-
+**STable 5a.** Weibull model with time ratios relative to *cd*^225R^ homozygotes (the comparisons in the current text), with corrected standard errors (Section B1 of the revision notes).
 
 ```{r}
 blood_feeding_labels_html <- c(
@@ -321,12 +435,46 @@ tab_model(
 )
 ```
 
+Groups with no deaths are fitted out of the Weibull model (complete separation; if included they corrupt the standard errors of every other group): `r paste(attr(data_bf_model, "zero_event_groups"), collapse = ", ")`.
+
+**STable 5b (new; comment 5).** Each heterozygous or homozygous group versus the WT siblings of the same line.
+
+```{r}
+# Time-ratio table helper (shared with the trans-het section)
+tr_table <- function(x, title) {
+  x |>
+    mutate(
+      observed = glue::glue("{deaths}/{n} vs {deaths_ref}/{n_ref}"),
+      across(c(tr, tr_lcl, tr_ucl), \(v) signif(v, 3))
+    ) |>
+    select(level, ref, observed, tr, tr_lcl, tr_ucl, p_raw, p_adj) |>
+    gt() |>
+    cols_label(
+      level = "Group",
+      ref = "Compared with",
+      observed = "Deaths/n (group vs comparator)",
+      tr = "Time ratio",
+      tr_lcl = "Lower 95% CI",
+      tr_ucl = "Upper 95% CI",
+      p_raw = "p",
+      p_adj = "p (Holm)"
+    ) |>
+    fmt(columns = c(p_raw, p_adj), fns = \(x) ifelse(is.na(x), "", ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f")))) |>
+    sub_missing(missing_text = "not estimable") |>
+    tab_spanner(label = title, columns = everything()) |>
+    opt_stylize(style = 1)
+}
+
+tr_table(bf_vs_wt, "Each Het/Hom group versus WT siblings of the same line")
+```
+
+**Figure 2.**
+
 ```{r}
 survival_after_blood
 ```
 
-
-# Median survival (t50) by group
+**STable 5c.** Median survival time (t50; values quoted in the text).
 
 ```{r}
 summary(weibull_bf$model, type = "quantile", quantiles = 0.5, ci = TRUE) |>
@@ -366,7 +514,7 @@ summary(weibull_bf$model, type = "quantile", quantiles = 0.5, ci = TRUE) |>
 
 ```
 
-# Survival probability at t = 300 h
+**STable 5d.** Survival probability at 300 h (the value for *cd*^225R^ homozygotes is quoted in the text).
 
 ```{r}
 summary(weibull_bf$model, type = "survival", t = 300, ci = TRUE) |>
@@ -405,9 +553,9 @@ summary(weibull_bf$model, type = "survival", t = 300, ci = TRUE) |>
   opt_stylize(style = 1)
 ```
 
-## TransHet survival
+## Trans-heterozygote survival (STable 8; Fig. 5)
 
-
+**STable 8a.** Weibull model with time ratios relative to *cd*^g225^ heterozygotes, with corrected standard errors (Section B1).
 
 ```{r}
 transhet_labels_html <- c(
@@ -425,6 +573,15 @@ tab_model(
 )
 ```
 
+Group key: 2360Het = *cd*^g225^ het; 2360WT = its WT siblings; D251:2360Het = *cd*^g225^;*cd*^225R^ trans-het; D251:2360WT = *cd*^225R^ het (no deaths, fitted out of the model).
+
+**STable 8b (new).** Each group versus the *cd*^g225^ WT siblings, and trans-heterozygotes versus *cd*^g225^ heterozygotes (the key comparison in the text, comment 3).
+
+```{r}
+tr_table(th_contrasts, "Trans-het experiment: versus cd[g225] WT siblings, and trans-het versus cd[g225] het")
+```
+
+**STable 8c.** Survival probability at 100 h (values quoted in the text).
 
 ```{r}
 # Survival probability at a fixed time point, per group
@@ -465,16 +622,19 @@ summary(weibull_th$model, type = "survival", t = 100, ci = TRUE) |>
 
 
 
+**Figure 5.**
+
 ```{r}
 transhet_survival
 ```
 
-## Smurf assay
+## Smurf assay (STable 6; Fig. 3C, 3D; SFig. 3)
 
 ```{r, include = FALSE}
 source("scripts/smurf.R")
 ```
 
+**STable 6a.** Smurf status: binomial GLM coefficients. The KO term is not estimable (0/80 Smurf-positive), so report Fisher's exact test instead (Table 1, STable S_fitness).
 
 ```{r}
 
@@ -507,6 +667,8 @@ tab_model(
 )
 ```
 
+**STable 6b.** Proportion of Smurf-positive females by genotype (identical to the observed proportions, as the model is saturated).
+
 ```{r}
 emmeans::emmeans(smurf_model, specs = ~ genotype, type = "response") |>
   as_tibble() |>
@@ -536,30 +698,13 @@ emmeans::emmeans(smurf_model, specs = ~ genotype, type = "response") |>
   opt_stylize(style = 1)
 ```
 
+**Figure 3C** (R version of the Smurf proportions; error bars are 95% CIs, not SEM).
+
 ```{r}
 p_smurf
 ```
 
-### Alternative figure as bar chart
-
-```{r}
-tab_model(
-  model_smurf_by,
-  #   string.pred = line_labels_html,
-  show.re.var = FALSE
-)
-```
-
-
-
-```{r}
-# Survival probability at a fixed time point, per group
-summary(model_smurf_by,
-        type    = "survival",
-        t       = 72,                        # fixed time point in your time units
-        ci      = TRUE)
-
-```
+**Alternative to Figure 3C** (bar chart; not used).
 
 ```{r}
 
@@ -567,16 +712,20 @@ p_smurf2
 
 ```
 
+### Survival after 'blue-feeding' by genotype (SFig. 3)
 
-### Survival after Smurf
+No WT or KO females died, so the Weibull model is fitted to KI females only; WT and KO are reported as observed counts.
+
+**STable 6c (new; suggested).** Deaths by genotype after 'blue-feeding'. The text currently cites only SFig. 3 for these data.
 
 ```{r}
-tab_model(
-  model_smurf_surv,
-  #   string.pred = line_labels_html,
-  show.re.var = FALSE
-)
+smurf_surv_observed |>
+  gt() |>
+  cols_label(line = "Genotype", n = "Females", deaths = "Died") |>
+  opt_stylize(style = 1)
 ```
+
+**Text values.** Survival of *cd*^g225^ heterozygotes at 72 h after 'blue-feeding'.
 
 ```{r}
 # Survival probability at a fixed time point, per group
@@ -587,24 +736,32 @@ summary(model_smurf_surv,
 
 ```
 
+**SFig. 3.**
+
 ```{r}
 
 survival_after_smurf_plot
 
 ```
 
-### Survival separated by smurf
+### Survival by Smurf status (Fig. 3D)
 
+**STable 6d (new; suggested).** Weibull model of survival by Smurf status in *cd*^g225^ heterozygotes (TR = 0.58 in the text). This is not currently in any STable.
 
 ```{r}
 tab_model(
   model_smurf_by,
-  #   string.pred = line_labels_html,
   show.re.var = FALSE
 )
-
-
 ```
+
+**Text values.** Survival at 72 h by Smurf status.
+
+```{r}
+summary(model_smurf_by, type = "survival", t = 72, ci = TRUE)
+```
+
+**Figure 3D.**
 
 ```{r}
 
@@ -612,18 +769,19 @@ survival_by_smurf_plot
 
 ```
 
-## XA Supplementation
+## XA supplementation (STable 7; Fig. 4)
 
 ```{r, include = FALSE}
 source("scripts/supplementation_data.R")
 ```
 
+**Superseded (original STable 7 model).** Pooled model of both routes and both genotypes, now including the WT vehicle controls. Kept for reference only: the per-route analysis below replaces it as the primary analysis (comment 4).
 
 ```{r}
 xa_labels_html <- c(
   "(Intercept)" = "Intercept (blood, 0 mM, Het)",
   "experimentsugar supplementation" = "Sugar supplementation",
-  "dosage_mM6mM C-" = "6 mM NaOH control",
+  "dosage_mMC-" = "NaOH vehicle control (C-)",
   "dosage_mM6mM" = "6 mM XA",
   "genotypeWT" = "WT"
 )
@@ -635,9 +793,79 @@ tab_model(
 )
 ```
 
+Pooled model (both routes, both genotypes, n = `r nrow(data_long2)`). The WT NaOH controls are now included (previously dropped by a column-name mismatch).
+
+### Per-route analysis of heterozygotes (reviewer comment 4)
+
+Each treatment within a supplementation route was a single cage, so a replicate term cannot be estimated. Each route is therefore analysed separately (heterozygotes only: 1 of 112 WT females died).
+
+**STable 7a.** Females and deaths by route, genotype and treatment.
+
+```{r}
+xa_observed |>
+  gt(groupname_col = "experiment") |>
+  cols_label(genotype = "Genotype", dosage_mM = "Treatment", n = "Females", deaths = "Died") |>
+  opt_stylize(style = 1)
+```
+
+**STable 7b.** Per-route Weibull models of heterozygotes: treatment contrasts.
+
+```{r}
+xa_arm_contrasts |>
+  select(experiment, contrast, tr, tr_lcl, tr_ucl, p_raw, p_adj) |>
+  gt(groupname_col = "experiment") |>
+  cols_label(
+    contrast = "Contrast",
+    tr = "Time ratio",
+    tr_lcl = "Lower 95% CI",
+    tr_ucl = "Upper 95% CI",
+    p_raw = "p",
+    p_adj = "p (Holm, 3 contrasts)"
+  ) |>
+  fmt_number(columns = c(tr, tr_lcl, tr_ucl), decimals = 2) |>
+  fmt(columns = c(p_raw, p_adj), fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  opt_stylize(style = 1)
+```
+
+**STable 7c.** Overall treatment effect within each route (likelihood-ratio test, 2 df). With three groups, unadjusted pairwise contrasts following a significant omnibus test (Fisher's protected LSD) control the family-wise error rate.
+
+```{r}
+xa_arm_lrt |>
+  gt() |>
+  fmt_number(columns = chisq, decimals = 2) |>
+  fmt(columns = p, fns = \(x) formatC(x, digits = 3, format = "f")) |>
+  opt_stylize(style = 1)
+```
+
+**STable 7d.** Combined across routes (heterozygotes; route as a blocking factor). Arm × treatment interaction: χ² = `r round(xa_interaction_lrt$chisq, 2)`, df = `r xa_interaction_lrt$df`, p = `r signif(xa_interaction_lrt$p, 2)`.
+
+```{r}
+xa_pooled_contrasts |>
+  select(contrast, tr, tr_lcl, tr_ucl, p_raw, p_adj) |>
+  gt() |>
+  fmt_number(columns = c(tr, tr_lcl, tr_ucl), decimals = 2) |>
+  fmt(columns = c(p_raw, p_adj), fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  opt_stylize(style = 1)
+```
+
+**STable 7e.** Survival of heterozygotes at 72 h by route and treatment (values quoted in the text).
+
+```{r}
+xa_surv_72 |>
+  select(experiment, dosage_mM, est, lcl, ucl) |>
+  gt(groupname_col = "experiment") |>
+  fmt_percent(columns = c(est, lcl, ucl), decimals = 1) |>
+  cols_label(dosage_mM = "Treatment", est = "Survival at 72 h", lcl = "Lower 95% CI", ucl = "Upper 95% CI") |>
+  opt_stylize(style = 1)
+```
+
+**Figure 4.**
+
 ```{r}
 XA_suppl
 ```
+
+**Superseded.** Survival at 72 h from the original pooled model: the source of the 83%, 58%, 94% and 83.4% in the current text. Do not use.
 
 ```{r}
 summary(model_4, type = "survival", t = 72, ci = TRUE) |>
@@ -678,15 +906,40 @@ summary(model_4, type = "survival", t = 72, ci = TRUE) |>
   opt_stylize(style = 1)
 ```
 
-## Homozygous Survival
+## Larva-to-adult survival (STable 1)
 
 ```{r, include = FALSE}
 source("scripts/hom_survival.R")
 ```
 
-Adult eclosion was assessed from balanced crosses. The proportion of adults eclosing out of an expected 200 was modelled with a binomial GLM including line (1759 vs QA383P), genotype (HET, WT), sex, and all two- and three-way interactions (n = 16 observations; HOM observations excluded due to missingness). The reference cell was QA383P, HET, female.
+Larva-to-adult survival was assessed in trays of 200 mixed-sex larvae (two trays per genotype and line), with adults scored by sex. The number of adults of each sex out of 200 larvae was modelled with a binomial GLM including line (1759 vs QA383P), genotype (WT, HET, HOM), sex and all interactions (n = 24 observations). Because each sex-specific count is out of 200 mixed-sex larvae, ~50% is the maximum under a 1:1 sex ratio. WT = non-transgenic siblings for *cd*^g384^ and SDA-500 for *cd*^384R^. The reference cell was QA383P, HET, female.
 
-The cd^g384^ line (1759) did not differ significantly from QA383P in HET female eclosion rate (OR = 1.22, p = 0.157). WT females did not differ significantly from HET females in either line (OR = 0.95, p = 0.722). Neither sex nor any two- or three-way interaction reached statistical significance (all p > 0.16). These results indicate that, in the absence of homozygotes, eclosion rates are broadly similar between lines, genotypes, and sexes, and that no strong line-by-genotype or line-by-sex effects on HET/WT viability are detectable in this dataset.
+*cd*^g384^ homozygotes almost entirely failed to reach adulthood as females (3/400 larvae; 0.75%) and were strongly reduced as males (54/400; 13.5%), whereas *cd*^384R^ homozygotes did not differ from WT in either sex (contrasts below).
+
+**STable 1a (new; comments 6 and 11).** Observed larvae, pupae and adults by line, genotype and sex.
+
+```{r}
+eclosion_observed |>
+  gt(groupname_col = "line") |>
+  fmt_percent(columns = prop_adults, decimals = 1) |>
+  cols_label(trays = "Trays", larvae = "Larvae", pupae = "Pupae", adults = "Adults", prop_adults = "Adults / larvae") |>
+  opt_stylize(style = 1)
+```
+
+**STable 1b (new; comment 5).** Each genotype versus WT within line and sex (Dunnett).
+
+```{r}
+eclosion_vs_wt |>
+  select(line, Sex, contrast, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
+  gt() |>
+  fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 3) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  cols_label(ratio = "OR", ratio.LCL = "Lower 95% CI", ratio.UCL = "Upper 95% CI", z.ratio = "z", p.value = "p (Dunnett)") |>
+  tab_spanner(label = "Each genotype versus WT within line and sex", columns = everything()) |>
+  opt_stylize(style = 1)
+```
+
+**STable 1c.** Binomial GLM coefficients.
 
 ```{r}
 hom_survival_labels_html <- c(
@@ -717,6 +970,8 @@ larvae_emm <- emmeans::emmeans(model, specs = ~ line + Genotype + Sex, type = "r
   as_tibble() 
 ```
 
+**STable 1d.** Genotype comparisons within line and sex (Tukey). This is the source of the *cd*^384R^ ORs in the current text (HET/HOM 0.82, WT/HOM 0.78).
+
 ```{r}
 emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
   contrasts1 <- as_tibble(emm1$contrasts) |>
@@ -729,6 +984,8 @@ emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
 
 gt(contrasts1)
 ```
+
+**STable 1e.** Line comparisons within genotype and sex. This is the source of OR = 1.22, p = 0.157 (shown here as its inverse, *cd*^384R^/*cd*^g384^ = 0.82).
 
 ```{r}
 emm2 <- emmeans::emmeans(model, pairwise ~ line | Genotype + Sex)
@@ -744,11 +1001,28 @@ gt(contrasts2)
 ```
 
 
-## qPCR
+## qPCR (Fig. 6; SFig. 5)
+
+Each line is compared with SDA-500 within sex using a linear model of ΔCt. Significance comes from a Freedman–Lane permutation test (5,000 permutations of reduced-model residuals within sex). This was corrected on 2026-11-06: the earlier version sign-flipped full-model residuals, which gave invalid p-values.
 
 ```{r, include = FALSE}
 results <- readRDS("data/ddCt_results.rds")
 ```
+
+**Statistics for Fig. 6 and SFig. 5 (suggested new STable).** Each line versus SDA-500 within sex.
+
+```{r}
+imap(results, \(r, nm) r$contrasts$permuted |> mutate(normalisation = nm)) |>
+  list_rbind() |>
+  select(normalisation, Sex, contrast, estimate, SE, df, t.ratio, p.value, p.perm) |>
+  gt(groupname_col = "normalisation") |>
+  fmt_number(columns = c(estimate, SE, t.ratio), decimals = 2) |>
+  fmt(columns = c(p.value, p.perm), fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
+  cols_label(estimate = "Difference in ΔCt", t.ratio = "t", p.value = "p (parametric)", p.perm = "p (permutation)") |>
+  opt_stylize(style = 1)
+```
+
+**Figure 6** (*cd* normalised to *rps7*).
 
 ```{r}
 results$Cardinal_Rps7$plot
@@ -757,8 +1031,28 @@ results$Cardinal_Rps7$plot
 ```
 
 
+**SFig. 5** (*cd* normalised to *GAPDH*).
+
 ```{r}
 
 results$Cardinal_GADPH$plot
 
+```
+
+## Table 1 and STable S_fitness (new; comment 5)
+
+```{r, include = FALSE}
+source("scripts/fitness_summary_table.R")
+```
+
+**Table 1 (new, main text).** Direction and significance of each trait relative to the WT group of the same line.
+
+```{r}
+table1_gt
+```
+
+**STable S_fitness (new; number to be assigned).** Observed values, ratios with 95% CIs and p-values behind Table 1.
+
+```{r}
+table_s_gt
 ```

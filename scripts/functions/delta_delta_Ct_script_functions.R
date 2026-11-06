@@ -134,38 +134,59 @@ plot_ddct <- function(data, contrast, plot_title = NULL) {
     )
 }
 
-#' Compute treatment-vs-control contrasts from a ddCt GLM
+#' Compute permutation-tested treatment-vs-control contrasts of delta-Ct
 #'
-#' Fits a Gaussian GLM of `delta_delta_Ct ~ Sample * Sex` and returns
-#' pairwise treatment-vs-control contrasts via [emmeans::contrast()].
+#' Fits a linear model of `delta_Ct ~ Sample * Sex` and tests each
+#' treatment-vs-control contrast (each line versus SDA-500, within sex) by
+#' a Freedman-Lane permutation test: the residuals of the reduced model
+#' (`delta_Ct ~ Sex`, i.e. with no Sample effect) are permuted within sex and
+#' added back to its fitted values, the full model is refitted, and the
+#' observed contrast t-statistics are compared with their permutation
+#' distribution.
+#'
+#' Previously the *full*-model residuals were sign-flipped. Those residuals
+#' sum to zero within each three-replicate cell, which gave each contrast its
+#' own, wrongly scaled null distribution, so the p-values did not track the
+#' t-statistics (corrected 2026-11-06).
 #'
 #' @param data A tibble from [calc_ddct()].
-#' @param control Character. The reference level in `Sample` to contrast
-#'   against. Default `"SDA-500"`.
-#' @return An `emmGrid` contrast object from [emmeans::contrast()].
+#' @param control Character. The reference level in `Sample`. Default
+#'   `"SDA-500"`.
+#' @param nperms Integer. Number of permutations. Default 5000.
+#' @return A list with `parametric` (emmeans contrast summary), `permuted`
+#'   (the same with permutation p-values in `p.perm`, computed as
+#'   (b + 1) / (nperms + 1) so they are never exactly zero) and
+#'   `diagnostics`.
 contrast_ddct <- function(data, control = "SDA-500", nperms = 5000) {
+  ref_idx <- which(levels(data$Sample) == control)
+
   # Full model
   model_full <- lm(delta_Ct ~ Sample * Sex, data = data)
   emm <- emmeans(model_full, ~ Sample | Sex)
-  con_obs <- contrast(emm, method = "trt.vs.ctrl", adjust = "none")
+  con_obs <- contrast(emm, method = "trt.vs.ctrl", ref = ref_idx, adjust = "none")
   obs_stats <- summary(con_obs)$t.ratio
 
-  # Reduced model — removes Sample effect, keeps Sex
+  # Reduced model: removes the Sample effect, keeps Sex
   model_reduced <- lm(delta_Ct ~ Sex, data = data)
+  fitted_reduced <- fitted(model_reduced)
+  resid_reduced <- residuals(model_reduced)
+  sex_blocks <- split(seq_len(nrow(data)), data$Sex)
 
-  permute <- function(data, model_full, model_reduced) {
-    weights <- sample(c(-1, 1), nrow(data), replace = TRUE)
-    data$delta_Ct_perm <- fitted(model_reduced) +
-      residuals(model_full) * weights
+  permute <- function() {
+    idx <- seq_len(nrow(data))
+    for (b in sex_blocks) {
+      idx[b] <- b[sample.int(length(b))] # permute within sex
+    }
+    data$delta_Ct_perm <- fitted_reduced + resid_reduced[idx]
     fit_perm <- lm(delta_Ct_perm ~ Sample * Sex, data = data)
     emm_perm <- emmeans(fit_perm, ~ Sample | Sex)
-    con_perm <- contrast(emm_perm, method = "trt.vs.ctrl", adjust = "none")
+    con_perm <- contrast(emm_perm, method = "trt.vs.ctrl", ref = ref_idx, adjust = "none")
     summary(con_perm)$t.ratio
   }
 
   set.seed(42)
-  perm_dist <- replicate(nperms, permute(data, model_full, model_reduced))
-  p_raw <- rowMeans(abs(perm_dist) >= abs(obs_stats))
+  perm_dist <- replicate(nperms, permute())
+  p_raw <- (rowSums(abs(perm_dist) >= abs(obs_stats)) + 1) / (nperms + 1)
 
   con_parametric <- summary(con_obs) |>
     as_tibble()
@@ -203,7 +224,11 @@ contrast_ddct <- function(data, control = "SDA-500", nperms = 5000) {
 #'   significance stars), and `y.position`.
 tidy_contrast <- function(contrasts, y_positions) {
   report_p <- function(p, digits = 3) {
-    reported <- if_else(p < 0.001, "p < 0.001", paste("p =", round(p, digits)))
+    reported <- if_else(
+      p < 0.001,
+      "p < 0.001",
+      paste("p =", formatC(p, format = "f", digits = digits))
+    )
 
     return(reported)
   }

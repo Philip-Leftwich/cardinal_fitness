@@ -105,12 +105,19 @@ raw_eggs <- fertility_data |>
   filter(!is.na(eggs)) |>
   mutate(cross = factor(cross, levels = cross_order))
 
-# Plot fecundity predictions
-p_fecundity <- plot_fertility(
+# Each cross versus its own line's WT group (Dunnett within line). Note the
+# WT group differs by line: cd[g384] = non-transgenic siblings x SDA-500
+# (both directions); cd[384R] = SDA-500 x SDA-500; cd[g225] = siblings x
+# SDA-500 (both directions) pooled with SDA-500 x SDA-500.
+egg_vs_wt <- get_emm_vs_wt(egg_model)
+egg_vs_wt
+
+# Plot fecundity predictions (Figure 1A)
+p_fecundity <- plot_fertility_by_line(
   emm_data = egg_emm,
   raw_data = raw_eggs,
   raw_y = eggs,
-  y_label = "Egg count"
+  y_label = "Eggs per female"
 )
 
 p_fecundity
@@ -157,8 +164,12 @@ raw_props <- fertility_data_combined |>
     cross = factor(cross, levels = cross_order)
   )
 
-# Plot
-p_fertility <- plot_fertility(
+# Each cross versus its own line's WT group (Dunnett within line)
+larvae_vs_wt <- get_emm_vs_wt(larvae_model2)
+larvae_vs_wt
+
+# Plot (Figure 1B)
+p_fertility <- plot_fertility_by_line(
   emm_data = larvae_emm,
   raw_data = raw_props,
   raw_y = prop,
@@ -170,3 +181,11 @@ p_fertility <- plot_fertility(
 )
 
 p_fertility
+
+# Figure 1: fecundity (A) above fertility (B), shared legends
+fig1 <- p_fecundity /
+  p_fertility +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "A")
+
+fig1

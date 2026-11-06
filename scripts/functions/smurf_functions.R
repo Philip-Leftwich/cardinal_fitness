@@ -1,4 +1,5 @@
 source(here::here("scripts", "packages.R"))
+source(here::here("scripts", "functions", "survival_helpers.R"))
 
 # ── Helper functions ───────────────────────────────────────────────────────────
 
@@ -94,11 +95,15 @@ plot_surv <- function(
 ) {
   p <- ggplot(surv_df, aes(x = time, y = est, fill = .data[[colour_var]])) +
     geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.2) +
-    geom_line(aes(colour = .data[[colour_var]])) +
+    geom_line(aes(colour = .data[[colour_var]], linetype = lt_model)) +
     geom_step(
       data = km_df,
-      aes(x = time, y = estimate, colour = .data[[colour_var]]),
-      linetype = "dashed",
+      aes(
+        x = time,
+        y = estimate,
+        colour = .data[[colour_var]],
+        linetype = lt_km
+      ),
       linewidth = 0.5,
       inherit.aes = FALSE
     ) +
@@ -106,10 +111,10 @@ plot_surv <- function(
     scale_x_continuous(breaks = seq(0, 120, by = 24)) +
     colour_scale +
     fill_scale +
+    estimate_linetype_layers() +
     labs(
       x = "Time (Hours)",
-      y = "Survival Probability",
-      caption = "Solid: Weibull model  |  Dashed: Kaplan-Meier"
+      y = "Survival Probability"
     ) +
     theme_bw(base_size = 12) +
     theme(

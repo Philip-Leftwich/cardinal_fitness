@@ -1,4 +1,5 @@
 source(here::here("scripts", "packages.R"))
+source(here::here("scripts", "functions", "survival_helpers.R"))
 
 # ── Shared lookups ─────────────────────────────────────────────────────────────
 
@@ -63,6 +64,61 @@ fit_weibull <- function(data, formula) {
   list(model = model, summary = summary)
 }
 
+#' Time ratios for chosen level-versus-reference pairs of one factor
+#'
+#' Computes linear contrasts between levels of a single factor in a fitted
+#' `flexsurvreg` accelerated failure time model (e.g. Weibull), using the
+#' model coefficients and their variance-covariance matrix. This keeps the
+#' shared shape parameter of the original model while allowing any level to
+#' serve as the comparator (e.g. each line's own wildtype siblings), rather
+#' than only the factor's reference level.
+#'
+#' @param model A fitted `flexsurvreg` AFT model.
+#' @param factor_name Character. Name of the factor in the model formula
+#'   (e.g. `"line_treatment"`).
+#' @param pairs A data frame with columns `level` (the group of interest) and
+#'   `ref` (its comparator), plus optionally `family` (contrasts sharing a
+#'   family are adjusted together; defaults to `ref`).
+#' @param adjust Character. Multiplicity adjustment passed to
+#'   [stats::p.adjust()] within each family. Default `"holm"`.
+#' @return `pairs` with added columns `tr`, `tr_lcl`, `tr_ucl` (time ratio
+#'   and 95% CI), `z`, `p_raw` and `p_adj`. Pairs involving a level that is
+#'   not in the fitted model (e.g. a group with no deaths that was fitted out
+#'   to avoid complete separation) are returned with `NA` estimates.
+contrast_levels <- function(model, factor_name, pairs, adjust = "holm") {
+  b <- coef(model)
+  V <- vcov(model)
+  model_levels <- model$covdata$xlev[[factor_name]]
+  coef_name <- function(lvl) paste0(factor_name, lvl)
+
+  lin_comb <- function(level, ref) {
+    if (!all(c(level, ref) %in% model_levels)) {
+      return(c(est = NA_real_, se = NA_real_))
+    }
+    a <- setNames(numeric(length(b)), names(b))
+    # The model's reference level has no coefficient (its effect is zero)
+    if (coef_name(level) %in% names(b)) a[coef_name(level)] <- 1
+    if (coef_name(ref) %in% names(b)) a[coef_name(ref)] <- a[coef_name(ref)] - 1
+    c(est = sum(a * b), se = sqrt(drop(t(a) %*% V %*% a)))
+  }
+
+  if (!"family" %in% names(pairs)) pairs$family <- pairs$ref
+
+  pairs |>
+    mutate(
+      lc = map2(level, ref, lin_comb),
+      log_tr = map_dbl(lc, "est"),
+      se = map_dbl(lc, "se"),
+      tr = exp(log_tr),
+      tr_lcl = exp(log_tr - qnorm(0.975) * se),
+      tr_ucl = exp(log_tr + qnorm(0.975) * se),
+      z = log_tr / se,
+      p_raw = 2 * pnorm(-abs(z))
+    ) |>
+    mutate(p_adj = p.adjust(p_raw, method = adjust), .by = family) |>
+    select(-lc)
+}
+
 #' Predict survival probabilities from a fitted Weibull model
 #'
 #' @param model A fitted `flexsurvreg` object.
@@ -93,20 +149,29 @@ pred_weibull <- function(model, data, t_max, n_t = 108) {
 #' @param formula A formula passed to [survival::survfit()], typically
 #'   of the form `Surv(time, event) ~ strata_var`.
 #' @return A tibble from [broom::tidy.survfit()] with the `strata` column
-#'   stripped of its variable-name prefix.
+#'   stripped of its variable-name prefix and a time-zero row (estimate = 1)
+#'   prepended per stratum, so step lines start at 1 and groups with few or no
+#'   deaths are still drawn.
 tidy_km <- function(data, formula) {
   km_fit <- survfit(formula, data = data)
   strata_prefix <- paste0(all.vars(formula[[3]]), "=")
-  broom::tidy(km_fit) |>
+  tidy_df <- broom::tidy(km_fit) |>
     mutate(
       strata = str_remove_all(strata, paste(strata_prefix, collapse = "|"))
     )
+  time_zero <- tidy_df |>
+    distinct(strata) |>
+    mutate(time = 0, estimate = 1)
+  bind_rows(time_zero, tidy_df) |>
+    arrange(strata, time)
 }
 
 #' Build a single trans-het survival panel
 #'
 #' Filters Weibull and Kaplan-Meier data to a single line and produces a
-#' ggplot panel with ribbon CIs, model lines, and KM step overlays.
+#' ggplot panel with ribbon CIs, model lines, and KM step overlays. Colour
+#' identifies genotype; linetype identifies the estimate (solid = Weibull
+#' model, dashed = Kaplan-Meier), matching the other survival figures.
 #'
 #' @param surv_df A tibble of Weibull predicted survival (from [pred_weibull()]).
 #'   Must contain columns `line`, `time`, `est`, `lcl`, `ucl`, `treatment`.
@@ -119,6 +184,9 @@ tidy_km <- function(data, formula) {
 #' @param plot_title An expression or character string for the panel title.
 #' @param show_y_label Logical. If `FALSE`, the y-axis label is suppressed
 #'   (useful for right-hand panels in a patchwork). Default `TRUE`.
+#' @param legend_order Integer. Order of this panel's colour legend when
+#'   panels are combined with collected guides; the shared estimate legend is
+#'   always placed after every panel's colour legend. Default `1`.
 #' @return A `ggplot` object.
 plot_transhet_panel <- function(
   surv_df,
@@ -128,8 +196,8 @@ plot_transhet_panel <- function(
   legend_labels,
   plot_title,
   colours,
-  linetypes = c("Het" = "solid", "WT" = "dashed"),
-  show_y_label = TRUE
+  show_y_label = TRUE,
+  legend_order = 1
 ) {
   p <- ggplot(
     filter(surv_df, line == line_val),
@@ -137,15 +205,14 @@ plot_transhet_panel <- function(
       x = time,
       y = est,
       colour = treatment,
-      linetype = treatment,
       fill = treatment
     )
   ) +
     geom_ribbon(aes(ymin = lcl, ymax = ucl), alpha = 0.15, colour = NA) +
-    geom_line(linewidth = 0.8) +
+    geom_line(aes(linetype = lt_model), linewidth = 0.8) +
     geom_step(
       data = filter(km_df, line == line_val),
-      aes(x = time, y = estimate, colour = treatment, linetype = treatment),
+      aes(x = time, y = estimate, colour = treatment, linetype = lt_km),
       linewidth = 0.5,
       inherit.aes = FALSE
     ) +
@@ -159,11 +226,7 @@ plot_transhet_panel <- function(
       name = legend_title,
       labels = legend_labels
     ) +
-    scale_linetype_manual(
-      values = linetypes,
-      name = legend_title,
-      labels = legend_labels
-    ) +
+    estimate_linetype_layers(colour_order = legend_order, linetype_order = 99) +
     ggtitle(plot_title) +
     transhet_theme +
     theme(legend.position = "bottom")
