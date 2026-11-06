@@ -710,7 +710,7 @@ tab_model(model, pred.labels = hom_survival_labels_html)
 ```
 
 
-#### Contasts
+#### Contrasts
 
 ```{r}
 larvae_emm <- emmeans::emmeans(model, specs = ~ line + Genotype + Sex, type = "response") |>
@@ -726,6 +726,8 @@ emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
       ratio.LCL = exp(estimate - 1.96 * SE),
       ratio.UCL = exp(estimate + 1.96 * SE)
     )
+
+gt(contrasts1)
 ```
 
 ```{r}
@@ -738,7 +740,7 @@ emm2 <- emmeans::emmeans(model, pairwise ~ line | Genotype + Sex)
       ratio.UCL = exp(estimate + 1.96 * SE)
     )
     
-
+gt(contrasts2)
 ```
 
 
