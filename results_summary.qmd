@@ -15,6 +15,25 @@ format:
 library(gt)
 library(glue)
 source("scripts/fertility_data.R")
+
+# Replace internal line codes (e.g. 1759, QA383P, D251_Het) with allele names
+# as HTML, for use with gt::fmt_markdown()
+line_names <- c(
+  "D251:2360(Het|WT)" = "<em>cd</em><sup>g225</sup>:<em>cd</em><sup>225R</sup> \\1",
+  "2360B5"            = "<em>cd</em><sup>g225</sup>",
+  "2360(?=Het|WT)"    = "<em>cd</em><sup>g225</sup> ",
+  "QA383P"            = "<em>cd</em><sup>384R</sup>",
+  "1759"              = "<em>cd</em><sup>g384</sup>",
+  "D251"              = "<em>cd</em><sup>225R</sup>",
+  "2072"              = "<em>cd</em><sup>g384del</sup>",
+  "2301"              = "<em>cd</em><sup>g338-384</sup>"
+)
+fix_lines <- function(x) {
+  x |>
+    as.character() |>
+    str_replace_all(line_names) |>
+    str_replace_all("(?<=</sup>)_(?=Het|Hom|WT)", " ")
+}
 ```
 
 
@@ -46,6 +65,34 @@ Each table and figure below is labelled with the manuscript item it supplies. Th
 
 Figures 1–6, SFig. 3 and SFig. 5 are labelled where they appear; exported versions are in `outputs/figures/`.
 
+### Panel-by-panel key to `Supplementary information_Rev.docx`
+
+The panel letters used in this report (for example "STable 3c") are the same letters used in the supplementary document, so "STable 3c" here is panel C of STable 3 there. Checked on 2026-11-10 by comparing the numbers in the supplementary document with the output of the current code (STables 3 and 1 were re-run; the rest were compared with the rendered report).
+
+| STable | Panels in this report | Panels in the supplementary document | Match |
+|---|---|---|---|
+| 1 Larva-to-adult | 1a observed; 1b Dunnett vs WT; 1c GLM coefficients; 1d genotype (Tukey); 1e line comparisons | A observed; B Dunnett; C coefficients (raw sjPlot copy); D genotype (Tukey); E coefficients again (clean copy) | Numbers match. **Panel E differs** (see below) |
+| 2 Engorgement | not generated | single table | Not applicable |
+| 3 Fecundity | 3a coefficients; 3b estimated means; 3c line within cross; 3d cross within line; 3e Dunnett vs WT; 3f observed | A to F, same order | Numbers match |
+| 4 Hatching | 4a coefficients; 4b estimated means; 4c line within cross; 4d cross within line; 4e Dunnett vs WT | A to E, same order | Numbers match |
+| 5 Blood-feeding survival | 5a Weibull model; 5b vs WT siblings; 5c median survival; 5d survival at 300 h | A to D, same order | Numbers match. Caption n differs |
+| 6 Smurf | 6a GLM; 6b proportions; 6c deaths; 6d survival by Smurf status | A to D, same order | Numbers match |
+| 7 XA supplementation | 7a counts; 7b per-route contrasts; 7c likelihood-ratio tests; 7d pooled; 7e survival at 72 h | A to E, same order | Numbers match. The superseded pooled model is correctly absent |
+| 8 Trans-heterozygotes | 8a Weibull model; 8b vs WT and trans-het vs het; 8c survival at 100 h | A to C, same order | Numbers match |
+| Not in the supplementary document | Table 1, STable S_fitness, qPCR statistics | none | Still to be added |
+
+### Differences found, and why
+
+1. **STable 1, panel E.** The supplementary document shows the coefficient table twice (panels C and E); the line-comparison table (1e here, the source of OR = 1.22, p = 0.157) is missing, although the caption promises it. Cause: the clean coefficient table was probably pasted in place of 1e. Fix: replace panel E with 1e, and keep one coefficient table (panel C has a raw `cbind(...)` header and broken labels).
+2. **STable 5 caption.** The caption gives n = 327, but the model table and this report give 337 (all groups except the 47 `cd`^g338-384^ WT females, which are fitted out). The caption is a typo.
+3. **STable 3 caption.** It says "egg count per well", while 3b and Figure 1A here say "eggs per female". Use one wording, after confirming that a well holds one female.
+4. **STable 4 caption.** It says "all comparisons are relative to WT (A)". Panel A is relative to the *cd*^384R^ SDA-500 × SDA-500 group; comparisons against each line's own WT are in panel E.
+5. **STable 6.** The supplementary document labels the terms by allele (cdg225, cd225R) and this report by KI/KO; wording only. The Fisher's exact test for the non-estimable KO term is not in the supplementary document.
+6. **STable 8 caption.** It describes a model with Het, Hom and WT genotypes and does not mention that the cd225R heterozygotes (no deaths) are fitted out of the model, or that panel B is Holm-adjusted.
+7. **SFig. 5 caption.** It says "permuted t-test"; the analysis is now a Freedman–Lane permutation test of ΔCt within sex (corrected 2026-11-06). The caption should be updated with the qPCR statistics table.
+8. **Labels in STables 3 and 4.** The intercept label here now reads *cd*^384R^, as in the supplementary document (it previously used the internal code). The odd extra "Intercept" row with IRR 9,534,217 in STable 3a appears identically in both, so it is not a transcription error. Its origin (probably the dispersion parameter printed by sjPlot) has not been checked.
+9. **Why fecundity statistics seem to differ from the earlier version.** The model, the estimated means (3b) and the pairwise contrasts (3c, 3d) are identical to the earlier render. What changed is that 3e (Dunnett, each cross against its own line's WT) was added. It differs from 3d because it compares fewer pairs (so a smaller multiplicity penalty), and its ratios are the inverse of the "WT − cross" rows in 3d (for example 1.31 against 0.76 for *cd*^384R^ female HET, z = 2.19 in both, p = 0.097 against 0.184). 3f (observed counts) was also added, and Figure 1A was redrawn.
+
 ## Fecundity (STable 3; Fig. 1A)
 
 **STable 3a.** Fecundity: model coefficients (zero-inflated negative binomial GLMM).
@@ -53,7 +100,7 @@ Figures 1–6, SFig. 3 and SFig. 5 are labelled where they appear; exported vers
 ```{r}
 
 line_labels_html <- c(
-  "(Intercept)"                    = "Intercept (QA383P, SDA&times;SDA)",
+  "(Intercept)"                    = "Intercept (<em>cd</em><sup>384R</sup>, SDA&times;SDA)",
   "line2360B5"                     = "<em>cd</em><sup>g225</sup>",
   "line1759"                       = "<em>cd</em><sup>g384</sup>",
   "crossFemale \nHET"              = "Female Het",
@@ -267,7 +314,7 @@ p_fecundity
 
 ```{r}
 larvae_labels_html <- c(
-  "(Intercept)"                  = "Intercept (QA383P, SDA&times;SDA)",
+  "(Intercept)"                  = "Intercept (<em>cd</em><sup>384R</sup>, SDA&times;SDA)",
   "line2360B5"                   = "<em>cd</em><sup>g225</sup>",
   "line1759"                     = "<em>cd</em><sup>g384</sup>",
   "crossFemale \nHET"            = "Female Het",
@@ -435,7 +482,7 @@ tab_model(
 )
 ```
 
-Groups with no deaths are fitted out of the Weibull model (complete separation; if included they corrupt the standard errors of every other group): `r paste(attr(data_bf_model, "zero_event_groups"), collapse = ", ")`.
+Groups with no deaths are fitted out of the Weibull model (complete separation; if included they corrupt the standard errors of every other group): `r paste(fix_lines(attr(data_bf_model, "zero_event_groups")), collapse = ", ")`.
 
 **STable 5b (new; comment 5).** Each heterozygous or homozygous group versus the WT siblings of the same line.
 
@@ -445,10 +492,12 @@ tr_table <- function(x, title) {
   x |>
     mutate(
       observed = glue::glue("{deaths}/{n} vs {deaths_ref}/{n_ref}"),
-      across(c(tr, tr_lcl, tr_ucl), \(v) signif(v, 3))
+      across(c(tr, tr_lcl, tr_ucl), \(v) signif(v, 3)),
+      across(c(level, ref), fix_lines)
     ) |>
     select(level, ref, observed, tr, tr_lcl, tr_ucl, p_raw, p_adj) |>
     gt() |>
+    fmt_markdown(columns = c(level, ref)) |>
     cols_label(
       level = "Group",
       ref = "Compared with",
@@ -559,10 +608,10 @@ summary(weibull_bf$model, type = "survival", t = 300, ci = TRUE) |>
 
 ```{r}
 transhet_labels_html <- c(
-  "(Intercept)" = "Intercept (2360B5 Het)",
-  "line_treatment2360WT" = "2360B5 WT",
-  "line_treatmentD251:2360Het" = "Trans-het (D251:2360 Het)",
-  "line_treatmentD251:2360WT" = "Het<sup>KO</sup> (D251:2360 WT)"
+  "(Intercept)" = "Intercept (<em>cd</em><sup>g225</sup> Het)",
+  "line_treatment2360WT" = "<em>cd</em><sup>g225</sup> WT",
+  "line_treatmentD251:2360Het" = "Trans-het (<em>cd</em><sup>g225</sup>:<em>cd</em><sup>225R</sup> Het)",
+  "line_treatmentD251:2360WT" = "<em>cd</em><sup>225R</sup> Het (<em>cd</em><sup>g225</sup>:<em>cd</em><sup>225R</sup> WT)"
 )
 
 tab_model(
@@ -573,7 +622,7 @@ tab_model(
 )
 ```
 
-Group key: 2360Het = *cd*^g225^ het; 2360WT = its WT siblings; D251:2360Het = *cd*^g225^;*cd*^225R^ trans-het; D251:2360WT = *cd*^225R^ het (no deaths, fitted out of the model).
+Groups: *cd*^g225^ het and its WT siblings; *cd*^g225^:*cd*^225R^ trans-het; *cd*^225R^ het (labelled *cd*^g225^:*cd*^225R^ WT; no deaths, fitted out of the model).
 
 **STable 8b (new).** Each group versus the *cd*^g225^ WT siblings, and trans-heterozygotes versus *cd*^g225^ heterozygotes (the key comparison in the text, comment 3).
 
@@ -912,7 +961,7 @@ summary(model_4, type = "survival", t = 72, ci = TRUE) |>
 source("scripts/hom_survival.R")
 ```
 
-Larva-to-adult survival was assessed in trays of 200 mixed-sex larvae (two trays per genotype and line), with adults scored by sex. The number of adults of each sex out of 200 larvae was modelled with a binomial GLM including line (1759 vs QA383P), genotype (WT, HET, HOM), sex and all interactions (n = 24 observations). Because each sex-specific count is out of 200 mixed-sex larvae, ~50% is the maximum under a 1:1 sex ratio. WT = non-transgenic siblings for *cd*^g384^ and SDA-500 for *cd*^384R^. The reference cell was QA383P, HET, female.
+Larva-to-adult survival was assessed in trays of 200 mixed-sex larvae (two trays per genotype and line), with adults scored by sex. The number of adults of each sex out of 200 larvae was modelled with a binomial GLM including line (*cd*^g384^ vs *cd*^384R^), genotype (WT, HET, HOM), sex and all interactions (n = 24 observations). Because each sex-specific count is out of 200 mixed-sex larvae, ~50% is the maximum under a 1:1 sex ratio. WT = non-transgenic siblings for *cd*^g384^ and SDA-500 for *cd*^384R^. The reference cell was QA383P, HET, female.
 
 *cd*^g384^ homozygotes almost entirely failed to reach adulthood as females (3/400 larvae; 0.75%) and were strongly reduced as males (54/400; 13.5%), whereas *cd*^384R^ homozygotes did not differ from WT in either sex (contrasts below).
 
@@ -920,9 +969,11 @@ Larva-to-adult survival was assessed in trays of 200 mixed-sex larvae (two trays
 
 ```{r}
 eclosion_observed |>
-  gt(groupname_col = "line") |>
+  mutate(line = fix_lines(line)) |>
+  gt() |>
+  fmt_markdown(columns = line) |>
   fmt_percent(columns = prop_adults, decimals = 1) |>
-  cols_label(trays = "Trays", larvae = "Larvae", pupae = "Pupae", adults = "Adults", prop_adults = "Adults / larvae") |>
+  cols_label(line = "Line", trays = "Trays", larvae = "Larvae", pupae = "Pupae", adults = "Adults", prop_adults = "Adults / larvae") |>
   opt_stylize(style = 1)
 ```
 
@@ -930,8 +981,10 @@ eclosion_observed |>
 
 ```{r}
 eclosion_vs_wt |>
+  mutate(line = fix_lines(line)) |>
   select(line, Sex, contrast, ratio, ratio.LCL, ratio.UCL, z.ratio, p.value) |>
   gt() |>
+  fmt_markdown(columns = line) |>
   fmt_number(columns = c(ratio, ratio.LCL, ratio.UCL, z.ratio), decimals = 3) |>
   fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
   cols_label(ratio = "OR", ratio.LCL = "Lower 95% CI", ratio.UCL = "Upper 95% CI", z.ratio = "z", p.value = "p (Dunnett)") |>
@@ -982,7 +1035,12 @@ emm1 <- emmeans::emmeans(model, pairwise ~ Genotype | line + Sex)
       ratio.UCL = exp(estimate + 1.96 * SE)
     )
 
-gt(contrasts1)
+contrasts1 |>
+  mutate(line = fix_lines(line)) |>
+  gt() |>
+  fmt_markdown(columns = line) |>
+  fmt_number(columns = c(estimate, SE, z.ratio, ratio, ratio.LCL, ratio.UCL), n_sigfig = 3, drop_trailing_zeros = FALSE) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(signif(x, 3), digits = 3, format = "fg", flag = "#")))
 ```
 
 **STable 1e.** Line comparisons within genotype and sex. This is the source of OR = 1.22, p = 0.157 (shown here as its inverse, *cd*^384R^/*cd*^g384^ = 0.82).
@@ -997,7 +1055,12 @@ emm2 <- emmeans::emmeans(model, pairwise ~ line | Genotype + Sex)
       ratio.UCL = exp(estimate + 1.96 * SE)
     )
     
-gt(contrasts2)
+contrasts2 |>
+  mutate(contrast = fix_lines(contrast)) |>
+  gt() |>
+  fmt_markdown(columns = contrast) |>
+  fmt_number(columns = c(estimate, SE, z.ratio, ratio, ratio.LCL, ratio.UCL), n_sigfig = 3, drop_trailing_zeros = FALSE) |>
+  fmt(columns = p.value, fns = \(x) ifelse(x < 0.001, "<0.001", formatC(signif(x, 3), digits = 3, format = "fg", flag = "#")))
 ```
 
 
@@ -1014,8 +1077,10 @@ results <- readRDS("data/ddCt_results.rds")
 ```{r}
 imap(results, \(r, nm) r$contrasts$permuted |> mutate(normalisation = nm)) |>
   list_rbind() |>
+  mutate(contrast = fix_lines(contrast)) |>
   select(normalisation, Sex, contrast, estimate, SE, df, t.ratio, p.value, p.perm) |>
   gt(groupname_col = "normalisation") |>
+  fmt_markdown(columns = contrast) |>
   fmt_number(columns = c(estimate, SE, t.ratio), decimals = 2) |>
   fmt(columns = c(p.value, p.perm), fns = \(x) ifelse(x < 0.001, "<0.001", formatC(x, digits = 3, format = "f"))) |>
   cols_label(estimate = "Difference in ΔCt", t.ratio = "t", p.value = "p (parametric)", p.perm = "p (permutation)") |>
