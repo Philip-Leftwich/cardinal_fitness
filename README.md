@@ -15,6 +15,8 @@
 This code is released under the [MIT License](LICENSE). You are free to reuse
 and adapt it with attribution.
 
+[![DOI](https://zenodo.org/badge/729828491.svg)](https://doi.org/10.5281/zenodo.24369622)
+
 ---
 
 ## Associated Manuscript
